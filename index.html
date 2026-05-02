@@ -1,11 +1,82 @@
-Source：
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>競艇 展開予想アプリ</title>
+<style>
+body{font-family:sans-serif;background:#f4f6f8;padding:10px}
+.card{background:#fff;padding:10px;border-radius:10px;margin-bottom:10px}
+button{padding:12px;background:#053f8f;color:#fff;border:none;border-radius:8px;width:100%}
+.ticket{font-size:20px;font-weight:bold;margin:5px 0}
+</style>
+</head>
+<body>
 
-Deploy from a branch
+<div class="card">
+<h3>競艇 簡易予想</h3>
 
-Branch：
+<label>風速</label>
+<input id="wind" type="number" value="2">
 
-main
+<label>インの強さ（1〜10）</label>
+<input id="inPower" type="number" value="7">
 
-Folder：
+<br><br>
+<button onclick="calc()">予想する</button>
+</div>
 
-/ (root)
+<div class="card" id="out">ここに結果が出る</div>
+
+<script>
+function calc(){
+ let w = Number(document.getElementById("wind").value)
+ let p = Number(document.getElementById("inPower").value)
+
+ let base = 1
+
+ if(w >= 5) base = 3
+ if(w >= 7) base = 4
+ if(p <= 5) base = 2
+
+ let res =  本線: 1-${base}-2<br>  対抗: ${base}-1-2<br>  穴: ${base}-2-1 
+
+ document.getElementById("out").innerHTML = res
+}
+</script>
+
+</body>
+</html>
+<div class="card">
+
+<h3>競艇 簡易予想</h3>
+</div>
+<div class="card" id="out">ここに結果が出る</div>
+<script>
+function calc(){
+ let w = Number(document.getElementById("wind").value)
+ let p = Number(document.getElementById("inPower").value)
+
+ let base = 1
+
+ if(w >= 5) base = 3
+ if(w >= 7) base = 4
+ if(p <= 5) base = 2
+
+ let res = `
+ 本線: 1-${base}-2<br>
+ 対抗: ${base}-1-2<br>
+ 穴: ${base}-2-1
+ `
+
+ document.getElementById("out").innerHTML = res
+}
+</script>
+</body>
+</html>
+
+  
