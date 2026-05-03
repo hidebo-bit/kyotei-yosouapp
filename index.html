@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>競艇 本気予想ツール</title>
+<title>唐津専用 競艇本気予想</title>
 <style>
 body{font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;background:#f4f6f8;margin:0;padding:10px}
 header{background:#053f8f;color:#fff;padding:14px;text-align:center;font-weight:bold;font-size:18px;margin:-10px -10px 12px}
@@ -12,32 +12,23 @@ header{background:#053f8f;color:#fff;padding:14px;text-align:center;font-weight:
 label{font-size:12px;color:#555;display:block;margin-bottom:3px}
 input,select{width:100%;box-sizing:border-box;height:38px;border-radius:8px;border:1px solid #ccc;padding:6px 8px;font-size:15px}
 button{width:100%;padding:12px;background:#053f8f;color:#fff;border:none;border-radius:10px;font-weight:bold;margin:6px 0}
-.green{background:#117a35}.orange{background:#b36b00}
+.green{background:#117a35}.orange{background:#b36b00}.purple{background:#6b4cff}
 .ticket{display:inline-block;font-size:21px;font-weight:bold;background:#eef5ff;padding:8px 10px;border-radius:10px;margin:4px 0}
 .hot{background:#fff0e6}.row{padding:6px 0;border-bottom:1px solid #eee}.small{font-size:12px;color:#666}
 </style>
 </head>
 
 <body>
-<header>競艇 本気予想ツール</header>
+<header>唐津専用 競艇本気予想</header>
 
 <div class="card">
 <h2>レース設定</h2>
 <div class="grid">
 <div><label>日付</label><input type="date" id="date"></div>
+<div><label>場</label><input value="唐津" disabled></div>
 
-<div><label>場</label>
-<select id="place">
-<option>桐生</option><option>戸田</option><option>江戸川</option><option>平和島</option>
-<option>多摩川</option><option>浜名湖</option><option>蒲郡</option><option>常滑</option>
-<option>津</option><option>三国</option><option>びわこ</option><option>住之江</option>
-<option>尼崎</option><option>鳴門</option><option>丸亀</option><option>児島</option>
-<option>宮島</option><option>徳山</option><option>下関</option><option>若松</option>
-<option>芦屋</option><option>福岡</option><option>唐津</option><option>大村</option>
-</select>
-</div>
-
-<div><label>レース</label>
+<div>
+<label>レース</label>
 <select id="race">
 <option>1R</option><option>2R</option><option>3R</option><option>4R</option>
 <option>5R</option><option>6R</option><option>7R</option><option>8R</option>
@@ -46,21 +37,24 @@ button{width:100%;padding:12px;background:#053f8f;color:#fff;border:none;border-
 </div>
 
 <div><label>資金</label><input type="number" id="bankroll" value="10000"></div>
+
 <div><label>前付け</label><select id="front"><option value="no">なし</option><option value="yes">あり</option></select></div>
 <div><label>深イン</label><select id="deep"><option value="low">低</option><option value="mid">中</option><option value="high">高</option></select></div>
+
 <div><label>風向き</label><select id="wind"><option value="normal">普通</option><option value="head">向かい風</option><option value="tail">追い風</option><option value="cross">横風</option></select></div>
 <div><label>風速(m)</label><input type="number" step="0.5" id="windSpeed" value="2"></div>
+
 <div><label>波</label><select id="wave"><option value="normal">普通</option><option value="rough">荒れ気味</option><option value="bad">かなり荒れ</option></select></div>
 <div><label>潮</label><select id="tide"><option value="none">影響少なめ</option><option value="high">満潮</option><option value="low">干潮</option><option value="rising">上げ潮</option><option value="falling">下げ潮</option></select></div>
 </div>
 
-<button class="orange" onclick="openMurao()">データ分析サイトを開く</button>
-<button class="orange" onclick="openOfficial()">公式を見る</button>
-<button class="orange" onclick="openPoseidon()">ポセイドンを見る</button>
-<p class="small">分析サイト・公式・ポセイドンを見ながら手入力。選手IDで特徴保存できます。</p>
+<button class="purple" onclick="loadKaratsu()">唐津公式から取得</button>
+<button class="orange" onclick="openKaratsu()">唐津公式を開く</button>
+<p class="small">取得できない場合は唐津公式を見ながら手入力。選手IDで特徴保存できます。</p>
 </div>
 
 <div id="boats"></div>
+
 <button onclick="predict()">展開予想する</button>
 
 <div class="card">
@@ -69,6 +63,8 @@ button{width:100%;padding:12px;background:#053f8f;color:#fff;border:none;border-
 </div>
 
 <script>
+const WORKER_BASE = "https://odd-surf-f27b.h-kobayashi-0131.workers.dev/";
+
 function init(){
   document.getElementById("date").value = new Date().toISOString().slice(0,10);
   makeInputs();
@@ -106,11 +102,130 @@ function makeInputs(){
 }
 
 function val(id){return Number(document.getElementById(id).value||0)}
-function setVal(id,v){document.getElementById(id).value=v}
+function setVal(id,v){const e=document.getElementById(id);if(e&&v!==null&&v!==undefined&&v!=="")e.value=v}
+
+function getRaceNo(){return document.getElementById("race").value.replace("R","")}
+function getKaratsuUrl(){
+  return "https://www.boatrace-karatsu.jp/sp/index.php?page=yosou-syussou";
+}
+
+function openKaratsu(){
+  window.open(getKaratsuUrl(),"_blank");
+}
+
+async function loadKaratsu(){
+  try{
+    document.getElementById("result").innerHTML="唐津公式から取得中...";
+
+    const api=WORKER_BASE+"?url="+encodeURIComponent(getKaratsuUrl());
+    const res=await fetch(api);
+    const data=await res.json();
+
+    if(!data.ok){
+      alert("取得失敗");
+      return;
+    }
+
+    applyKaratsu(data.html);
+    predict();
+    alert("取得しました。数値は確認してね。");
+
+  }catch(e){
+    alert("エラー："+e.message);
+  }
+}
+
+function applyKaratsu(html){
+  const doc=new DOMParser().parseFromString(html,"text/html");
+  const text=doc.body.innerText.replace(/\s+/g," ");
+
+  // まず全部初期化
+  for(let i=1;i<=6;i++){
+    setVal("id"+i,"");
+    setVal("name"+i,"");
+    setVal("avgst"+i,"0.15");
+    setVal("motor"+i,"35");
+    setVal("boat"+i,"35");
+    setVal("win"+i,"5.00");
+  }
+
+  // 出走表っぽい部分から抽出
+  const racerRegex=/([1-6])\s+(\d{4})\s+([一-龥ぁ-んァ-ンー\s]{2,10})\s+(A1|A2|B1|B2).*?(\d+\.\d{2}).*?(\d+\.\d{2}).*?(0\.\d{2}|\.\d{2})/g;
+  let m;
+
+  while((m=racerRegex.exec(text))!==null){
+    const no=Number(m[1]);
+    const id=m[2];
+    const name=m[3].replace(/\s+/g,"");
+    const win=Number(m[5]);
+    let st=String(m[7]);
+    if(st.startsWith(".")) st="0"+st;
+
+    setVal("id"+no,id);
+    setVal("name"+no,name);
+    setVal("win"+no,win.toFixed(2));
+    setVal("avgst"+no,Number(st).toFixed(2));
+    loadPlayer(no);
+  }
+
+  // モーター・ボート2連率を抽出
+  const motorRegex=/([1-6])\s+\d{4}\s+[一-龥ぁ-んァ-ンー\s]{2,10}.*?モーター.*?(\d+\.\d).*?ボート.*?(\d+\.\d)/g;
+
+  while((m=motorRegex.exec(text))!==null){
+    const no=Number(m[1]);
+    const motor=Number(m[2]);
+    const boat=Number(m[3]);
+    setVal("motor"+no,motor.toFixed(1));
+    setVal("boat"+no,boat.toFixed(1));
+  }
+
+  // 展示っぽい数値は取れたら反映
+  const exRegex=/([1-6])\s+.*?(6\.\d{2}).*?(-?\d+\.\d|0)/g;
+  while((m=exRegex.exec(text))!==null){
+    const no=Number(m[1]);
+    const ex=Number(m[2]);
+    const tilt=Number(m[3]);
+    if(ex>=5&&ex<=8)setVal("ex"+no,ex.toFixed(2));
+    if(tilt>=-2&&tilt<=4)setVal("tilt"+no,tilt);
+  }
+
+  for(let i=1;i<=6;i++){
+    autoConvert(i);
+  }
+}
+
+function autoConvert(i){
+  let motor=val("motor"+i);
+  let boat=val("boat"+i);
+  let win=val("win"+i);
+
+  let turn=5;
+  let sashi=val("sashi"+i);
+  let makuri=val("makuri"+i);
+  let ms=val("ms"+i);
+
+  if(motor>=45){makuri+=2;ms+=1}
+  else if(motor>=38){makuri+=1;ms+=1}
+  else if(motor<=25){makuri-=1}
+
+  if(boat>=45){turn+=2;sashi+=1}
+  else if(boat>=38){turn+=1}
+  else if(boat<=25){turn-=1}
+
+  if(win>=6.5){sashi+=2;ms+=2}
+  else if(win>=5.5){sashi+=1;ms+=1}
+  else if(win<=4){sashi-=1;ms-=1}
+
+  setVal("turn"+i,clamp(turn,1,10));
+  setVal("sashi"+i,clamp(sashi,1,10));
+  setVal("makuri"+i,clamp(makuri,1,10));
+  setVal("ms"+i,clamp(ms,1,10));
+}
 
 function savePlayer(i){
   const id=document.getElementById("id"+i).value;
   if(!id)return alert("選手IDを入力して");
+
   const data={
     nige:val("nige"+i),
     nigashi:val("nigashi"+i),
@@ -119,15 +234,18 @@ function savePlayer(i){
     ms:val("ms"+i),
     turn:val("turn"+i)
   };
-  localStorage.setItem("player_"+id,JSON.stringify(data));
+
+  localStorage.setItem("karatsu_player_"+id,JSON.stringify(data));
   alert("保存しました");
 }
 
 function loadPlayer(i){
   const id=document.getElementById("id"+i).value;
-  if(!id)return alert("選手IDを入力して");
-  const data=JSON.parse(localStorage.getItem("player_"+id)||"null");
-  if(!data)return alert("保存データなし");
+  if(!id)return;
+
+  const data=JSON.parse(localStorage.getItem("karatsu_player_"+id)||"null");
+  if(!data)return;
+
   setVal("nige"+i,data.nige);
   setVal("nigashi"+i,data.nigashi);
   setVal("sashi"+i,data.sashi);
@@ -136,73 +254,11 @@ function loadPlayer(i){
   setVal("turn"+i,data.turn);
 }
 
-function placeId(place){
-  const map={
-    "桐生":1,"戸田":2,"江戸川":3,"平和島":4,"多摩川":5,
-    "浜名湖":6,"蒲郡":7,"常滑":8,"津":9,"三国":10,
-    "びわこ":11,"住之江":12,"尼崎":13,"鳴門":14,"丸亀":15,
-    "児島":16,"宮島":17,"徳山":18,"下関":19,"若松":20,
-    "芦屋":21,"福岡":22,"唐津":23,"大村":24
-  };
-  return map[place];
-}
-
-function placeCode2(place){
-  return String(placeId(place)).padStart(2,"0");
-}
-
-function openMurao(){
-  const date=document.getElementById("date").value;
-  const place=document.getElementById("place").value;
-  const race=document.getElementById("race").value.replace("R","");
-  const stadiumId=placeId(place);
-
-  const url=`https://kyotei.murao111.net/race_details?race[race_date]=${date}&race[stadium_id]=${stadiumId}&race[race_no]=${race}`;
-  window.open(url,"_blank");
-}
-
-function openOfficial(){
-  const hd=document.getElementById("date").value.replaceAll("-","");
-  const place=document.getElementById("place").value;
-  const jcd=placeCode2(place);
-  const rno=document.getElementById("race").value.replace("R","");
-  const url=`https://www.boatrace.jp/owpc/pc/race/racelist?rno=${rno}&jcd=${jcd}&hd=${hd}`;
-  window.open(url,"_blank");
-}
-
-function openPoseidon(){
-  const date=document.getElementById("date").value.replaceAll("-","");
-  const place=document.getElementById("place").value;
-  const race=document.getElementById("race").value;
-  const url=`https://poseidon-boatrace.net/race/${date}/${placeId(place)}/${race}`;
-  window.open(url,"_blank");
-}
-
-function venueBonus(place,b){
-  let score=0;
-  if(["大村","芦屋","徳山"].includes(place)){
-    if(b.no===1)score+=6;
-    if(b.lane<=2)score+=2;
-  }
-  if(["江戸川","平和島","福岡"].includes(place)){
-    if(b.turn>=7)score+=3;
-    if(b.lane>=4)score+=2;
-  }
-  if(["常滑","三国","津"].includes(place)){
-    if(b.turn>=7)score+=2;
-    if(b.motor>=40)score+=2;
-  }
-  if(["住之江","蒲郡","若松","丸亀"].includes(place)){
-    if(b.ex<=6.78)score+=3;
-    if(b.makuri>=7||b.ms>=7)score+=2;
-  }
-  return score;
-}
+function clamp(n,min,max){return Math.max(min,Math.min(max,n))}
 
 function predict(){
-  const place=document.getElementById("place").value;
-  const race=document.getElementById("race").value;
   const date=document.getElementById("date").value;
+  const race=document.getElementById("race").value;
   const front=document.getElementById("front").value;
   const deep=document.getElementById("deep").value;
   const wind=document.getElementById("wind").value;
@@ -211,6 +267,7 @@ function predict(){
   const tide=document.getElementById("tide").value;
 
   let boats=[];
+
   for(let i=1;i<=6;i++){
     boats.push({
       no:i,
@@ -234,15 +291,17 @@ function predict(){
 
   boats.forEach(b=>{
     let s=0;
+
     s+=(0.20-b.avgst)*100;
     s+=(0.20-b.exst)*80;
     s+=(7.00-b.ex)*8;
+
     s+=b.motor*1.0;
     s+=b.boat*0.8;
     s+=b.win*5;
 
-    if(b.no===1)s+=b.nige*3.0;
-    if(b.no===2)s+=b.nigashi*2.2;
+    if(b.no===1)s+=b.nige*3.2;
+    if(b.no===2)s+=b.nigashi*2.4;
 
     s+=b.sashi*1.8;
     s+=b.makuri*2.0;
@@ -251,6 +310,11 @@ function predict(){
 
     if(b.tilt>0)s+=b.tilt*3;
     if(b.tilt<0)s+=Math.abs(b.tilt)*1.5;
+
+    // 唐津補正：インも強いが、風が出ると差し・まくり差しも評価
+    if(b.no===1)s+=4;
+    if(b.lane<=2)s+=1.5;
+    if(windSpeed>=4 && (b.ms>=7||b.sashi>=7))s+=3;
 
     if(front==="yes"){
       if(b.lane<=2)s-=6;
@@ -302,7 +366,6 @@ function predict(){
       if(b.makuri>=7||b.ms>=7)s+=3;
     }
 
-    s+=venueBonus(place,b);
     b.score=s;
   });
 
@@ -332,7 +395,7 @@ function predict(){
   if(rough>=70)roughLabel="高";
 
   let html=`
-    <b>${date} ${place} ${race}</b><br>
+    <b>${date} 唐津 ${race}</b><br>
     風：${wind} ${windSpeed}m / 波：${wave} / 潮：${tide}<br>
     荒れ度：<b>${roughLabel}</b><br><br>
 
