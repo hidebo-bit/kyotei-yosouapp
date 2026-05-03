@@ -143,33 +143,161 @@ async function loadPoseidon(){
       return;
     }
 
-    applyPoseidonHtml(data.html);
-    predict();
-    alert("ポセイドンから取得しました。数値は確認してね。");
-  }catch(e){
-    alert("エラー：" + e.message);
+function applyPoseidonHtml(html){
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const lines = doc.body.innerText
+    .split("\n")
+    .map(x => x.trim())
+    .filter(Boolean);
+
+  applyPoseidonEntryTable(lines);
+  applyPoseidonNewConcept(lines);
+
+  for(let i=1;i<=6;i++){
+    autoConvert(i);
   }
 }
 
-function applyPoseidonHtml(html){
-  let text = html
-    .replace(/<script[\s\S]*?<\/script>/gi," ")
-    .replace(/<style[\s\S]*?<\/style>/gi," ")
-    .replace(/<[^>]+>/g," ")
-    .replace(/\s+/g," ");
+function applyPoseidonEntryTable(lines){
+  for(let idx=0; idx<lines.length; idx++){
+    const line = lines[idx];
 
-  // 雑抽出版：ページ構造が変わると失敗する可能性あり
-  for(let i=1;i<=6;i++){
-    let around = getBoatText(text,i);
+    // 例：1 河内 悠利杏 B1
+    const m = line.match(/^([1-6])\s+(.+?)\s+(A1|A2|B1|B2)$/);
+    if(!m) continue;
 
-    let id = pickFirst(around, /(\d{4})/);
-    let avgst = pickNear(around, ["平均ST","ST"], /0\.\d{2}/);
-    let win = pickNear(around, ["勝率"], /\d+\.\d{2}/);
-    let motor = pickNear(around, ["モーター","モーター2連率"], /\d+\.\d/);
-    let boat = pickNear(around, ["ボート","ボート2連率"], /\d+\.\d/);
+    const no = Number(m[1]);
+    const name = m[2].replace(/\s+/g, "");
 
-    if(id){ setVal("id"+i,id); loadPlayer(i); }
-    let name = guessName(around);
+    const l1 = lines[idx+1] || "";
+    const l2 = lines[idx+2] || "";
+    const l3 = lines[idx+3] || "";
+    const l4 = lines[idx+4] || "";
+
+    const n1 = nums(l1);
+    const n2 = nums(l2);
+    const n3 = nums(l3);
+    const n4 = nums(l4);
+
+    // l1: 支部 平均ST 全国勝率 全国2連率 当地勝率
+    const avgst = n1[0];
+    const win = n1[1];
+
+    // l3: モーター2連率 No.xx
+    const motorRate = n3[0];
+
+    // l4: ボート2連率
+    const boatRate = n4[0];
+
+    setVal(`name${no}`, name);
+
+    if(valid(avgst,0,1)) setVal(`avgst${no}`, avgst.toFixed(2));
+    if(valid(win,0,10)) setVal(`win${no}`, win.toFixed(2));
+    if(valid(motorRate,0,100)) setVal(`motor${no}`, motorRate.toFixed(1));
+    if(valid(boatRate,0,100)) setVal(`boat${no}`, boatRate.toFixed(1));
+  }
+}
+
+function applyPoseidonNewConcept(lines){
+  // 登録番号
+  const idIndex = lines.findIndex(x => x.includes("1号艇") && x.includes("6号艇"));
+  if(idIndex >= 0){
+    const ids = nums(lines[idIndex+1] || "").filter(x => x >= 1000);
+    for(let i=1;i<=6;i++){
+      if(ids[i-1]){
+        setVal(`id${i}`, ids[i-1]);
+        loadPlayer(i);
+      }
+    }
+  }
+
+  // 1着率・逃がし率
+  const firstRateIndex = lines.findIndex(x => x.includes("1着率") && x.includes("逃がし率"));
+  if(firstRateIndex >= 0){
+    const section = collectUntil(lines, firstRateIndex, "差され率").join(" ");
+    const p = percents(section);
+
+    // 1号艇の逃げ評価
+    if(p[0] !== undefined){
+      setVal("nige1", rateToScore(p[0]));
+    }
+
+    // 2号艇の逃がし評価
+    if(p[1] !== undefined){
+      setVal("nigashi2", rateToScore(p[1]));
+    }
+  }
+
+  // 差し率
+  const sashiIndex = lines.findIndex(x => x.includes("差し率"));
+  if(sashiIndex >= 0){
+    const section = collectUntil(lines, sashiIndex, "まくられ率").join(" ");
+    const p = percents(section);
+    for(let i=1;i<=6;i++){
+      if(p[i-1] !== undefined){
+        setVal(`sashi${i}`, rateToScore(p[i-1]));
+      }
+    }
+  }
+
+  // まくり率
+  const makuriIndex = lines.findIndex(x => x.includes("まくり率"));
+  if(makuriIndex >= 0){
+    const section = collectUntil(lines, makuriIndex, "2連対率").join(" ");
+    const p = percents(section);
+    for(let i=1;i<=6;i++){
+      if(p[i-1] !== undefined){
+        setVal(`makuri${i}`, rateToScore(p[i-1]));
+      }
+    }
+  }
+
+  // 2連対率 → まくり差し/道中力寄りに反映
+  const renIndex = lines.findIndex(x => x.includes("2連対率"));
+  if(renIndex >= 0){
+    const section = collectUntil(lines, renIndex, "※").join(" ");
+    const p = percents(section);
+    for(let i=1;i<=6;i++){
+      if(p[i-1] !== undefined){
+        setVal(`ms${i}`, rateToScore(p[i-1]));
+      }
+    }
+  }
+}
+
+function collectUntil(lines,startIndex,endWord){
+  const arr = [];
+  for(let i=startIndex+1;i<lines.length;i++){
+    if(lines[i].includes(endWord)) break;
+    arr.push(lines[i]);
+  }
+  return arr;
+}
+
+function nums(text){
+  const m = String(text).match(/-?\d+(\.\d+)?/g);
+  return m ? m.map(Number) : [];
+}
+
+function percents(text){
+  const m = String(text).match(/\d+(\.\d+)?%/g);
+  return m ? m.map(x => Number(x.replace("%",""))) : [];
+}
+
+function valid(n,min,max){
+  return typeof n === "number" && !isNaN(n) && n >= min && n <= max;
+}
+
+function rateToScore(rate){
+  if(rate >= 60) return 10;
+  if(rate >= 50) return 9;
+  if(rate >= 40) return 8;
+  if(rate >= 30) return 7;
+  if(rate >= 20) return 6;
+  if(rate >= 10) return 5;
+  if(rate > 0) return 4;
+  return 3;
+}
     if(name) setVal("name"+i,name);
 
     if(avgst) setVal("avgst"+i,avgst);
