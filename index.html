@@ -3,164 +3,354 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>競艇 本気予想（手入力版）</title>
-
+<title>競艇 本気予想ツール</title>
 <style>
-body{font-family:-apple-system;background:#f4f6f8;margin:0;padding:10px}
-header{background:#053f8f;color:#fff;padding:14px;text-align:center;font-weight:bold}
-.card{background:#fff;padding:12px;border-radius:12px;margin-bottom:10px}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-input,select{width:100%;height:36px;border-radius:6px;border:1px solid #ccc}
-button{width:100%;padding:10px;background:#053f8f;color:#fff;border:none;border-radius:8px;margin:5px 0}
-.green{background:#0a7f3f}
-.orange{background:#b36b00}
-.ticket{font-size:18px;background:#eef5ff;padding:6px;border-radius:6px}
+body{font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;background:#f4f6f8;margin:0;padding:10px}
+header{background:#053f8f;color:#fff;padding:14px;text-align:center;font-weight:bold;font-size:18px;margin:-10px -10px 12px}
+.card{background:#fff;padding:12px;border-radius:14px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+label{font-size:12px;color:#555;display:block;margin-bottom:3px}
+input,select{width:100%;box-sizing:border-box;height:38px;border-radius:8px;border:1px solid #ccc;padding:6px 8px;font-size:15px}
+button{width:100%;padding:12px;background:#053f8f;color:#fff;border:none;border-radius:10px;font-weight:bold;margin:6px 0}
+.green{background:#117a35}.orange{background:#b36b00}
+.ticket{display:inline-block;font-size:21px;font-weight:bold;background:#eef5ff;padding:8px 10px;border-radius:10px;margin:4px 0}
+.hot{background:#fff0e6}.row{padding:6px 0;border-bottom:1px solid #eee}.small{font-size:12px;color:#666}
 </style>
 </head>
 
 <body>
-
-<header>競艇 本気予想（手入力）</header>
+<header>競艇 本気予想ツール</header>
 
 <div class="card">
+<h2>レース設定</h2>
 <div class="grid">
-<input type="date" id="date">
+<div><label>日付</label><input type="date" id="date"></div>
+
+<div><label>場</label>
 <select id="place">
-<option>唐津</option>
-<option>福岡</option>
-<option>大村</option>
-</select>
-<select id="race">
-<option>1R</option><option>2R</option><option>3R</option>
-<option>4R</option><option>5R</option><option>6R</option>
-<option>7R</option><option>8R</option><option>9R</option>
-<option>10R</option><option>11R</option><option>12R</option>
+<option>桐生</option><option>戸田</option><option>江戸川</option><option>平和島</option>
+<option>多摩川</option><option>浜名湖</option><option>蒲郡</option><option>常滑</option>
+<option>津</option><option>三国</option><option>びわこ</option><option>住之江</option>
+<option>尼崎</option><option>鳴門</option><option>丸亀</option><option>児島</option>
+<option>宮島</option><option>徳山</option><option>下関</option><option>若松</option>
+<option>芦屋</option><option>福岡</option><option>唐津</option><option>大村</option>
 </select>
 </div>
 
+<div><label>レース</label>
+<select id="race">
+<option>1R</option><option>2R</option><option>3R</option><option>4R</option>
+<option>5R</option><option>6R</option><option>7R</option><option>8R</option>
+<option>9R</option><option>10R</option><option>11R</option><option>12R</option>
+</select>
+</div>
+
+<div><label>資金</label><input type="number" id="bankroll" value="10000"></div>
+<div><label>前付け</label><select id="front"><option value="no">なし</option><option value="yes">あり</option></select></div>
+<div><label>深イン</label><select id="deep"><option value="low">低</option><option value="mid">中</option><option value="high">高</option></select></div>
+<div><label>風向き</label><select id="wind"><option value="normal">普通</option><option value="head">向かい風</option><option value="tail">追い風</option><option value="cross">横風</option></select></div>
+<div><label>風速(m)</label><input type="number" step="0.5" id="windSpeed" value="2"></div>
+<div><label>波</label><select id="wave"><option value="normal">普通</option><option value="rough">荒れ気味</option><option value="bad">かなり荒れ</option></select></div>
+<div><label>潮</label><select id="tide"><option value="none">影響少なめ</option><option value="high">満潮</option><option value="low">干潮</option><option value="rising">上げ潮</option><option value="falling">下げ潮</option></select></div>
+</div>
+
+<button class="orange" onclick="openMurao()">データ分析サイトを開く</button>
 <button class="orange" onclick="openOfficial()">公式を見る</button>
-<button class="orange" onclick="openPoseidon()">ポセイドン</button>
+<button class="orange" onclick="openPoseidon()">ポセイドンを見る</button>
+<p class="small">分析サイト・公式・ポセイドンを見ながら手入力。選手IDで特徴保存できます。</p>
 </div>
 
 <div id="boats"></div>
+<button onclick="predict()">展開予想する</button>
 
-<button onclick="predict()">予想</button>
-
-<div class="card" id="result"></div>
+<div class="card">
+<h2>予想結果</h2>
+<div id="result">ここに結果が出ます</div>
+</div>
 
 <script>
-
 function init(){
- date.value=new Date().toISOString().slice(0,10);
- make();
+  document.getElementById("date").value = new Date().toISOString().slice(0,10);
+  makeInputs();
 }
 
-function make(){
- let html="";
- for(let i=1;i<=6;i++){
-  html+=`
-  <div class="card">
-  <b>${i}号艇</b>
-  <input id="id${i}" placeholder="選手ID">
-  <input id="name${i}" placeholder="名前">
-
-  <button class="green" onclick="save(${i})">保存</button>
-  <button onclick="load(${i})">読込</button>
-
-  <div class="grid">
-  <input id="avgst${i}" placeholder="平均ST" value="0.15">
-  <input id="exst${i}" placeholder="展示ST" value="0.15">
-  <input id="ex${i}" placeholder="展示タイム" value="6.80">
-  <input id="motor${i}" placeholder="モーター" value="35">
-  <input id="boat${i}" placeholder="ボート" value="35">
-  <input id="win${i}" placeholder="勝率" value="5">
-
-  <input id="nige${i}" placeholder="逃げ" value="5">
-  <input id="nigashi${i}" placeholder="逃がし" value="5">
-  <input id="sashi${i}" placeholder="差し" value="5">
-  <input id="makuri${i}" placeholder="まくり" value="5">
-  <input id="ms${i}" placeholder="まくり差し" value="5">
-  <input id="turn${i}" placeholder="ターン" value="6">
-  </div>
-  </div>`;
- }
- boats.innerHTML=html;
+function makeInputs(){
+  let html="";
+  for(let i=1;i<=6;i++){
+    html+=`
+    <div class="card">
+      <h2>${i}号艇</h2>
+      <div class="grid">
+        <div><label>選手ID</label><input id="id${i}" placeholder="登録番号"></div>
+        <div><label>選手名</label><input id="name${i}" placeholder="名前"></div>
+        <div><label>平均ST</label><input type="number" step="0.01" id="avgst${i}" value="0.15"></div>
+        <div><label>展示ST</label><input type="number" step="0.01" id="exst${i}" value="0.15"></div>
+        <div><label>展示タイム</label><input type="number" step="0.01" id="ex${i}" value="6.80"></div>
+        <div><label>チルト</label><input type="number" step="0.5" id="tilt${i}" value="0"></div>
+        <div><label>モーター2連率</label><input type="number" step="0.1" id="motor${i}" value="35"></div>
+        <div><label>ボート2連率</label><input type="number" step="0.1" id="boat${i}" value="35"></div>
+        <div><label>勝率</label><input type="number" step="0.01" id="win${i}" value="5.00"></div>
+        <div><label>進入</label><input type="number" id="lane${i}" value="${i}"></div>
+        <div><label>逃げ</label><input type="number" id="nige${i}" value="5"></div>
+        <div><label>逃がし</label><input type="number" id="nigashi${i}" value="5"></div>
+        <div><label>差し</label><input type="number" id="sashi${i}" value="5"></div>
+        <div><label>まくり</label><input type="number" id="makuri${i}" value="5"></div>
+        <div><label>まくり差し</label><input type="number" id="ms${i}" value="5"></div>
+        <div><label>ターン展示</label><input type="number" id="turn${i}" value="6"></div>
+      </div>
+      <button class="green" onclick="savePlayer(${i})">特徴保存</button>
+      <button onclick="loadPlayer(${i})">特徴読込</button>
+    </div>`;
+  }
+  document.getElementById("boats").innerHTML=html;
 }
 
 function val(id){return Number(document.getElementById(id).value||0)}
+function setVal(id,v){document.getElementById(id).value=v}
 
-function save(i){
- let id=document.getElementById("id"+i).value;
- if(!id)return alert("ID入れて");
-
- let data={
-  nige:val("nige"+i),
-  nigashi:val("nigashi"+i),
-  sashi:val("sashi"+i),
-  makuri:val("makuri"+i),
-  ms:val("ms"+i)
- };
-
- localStorage.setItem("p_"+id,JSON.stringify(data));
- alert("保存OK");
+function savePlayer(i){
+  const id=document.getElementById("id"+i).value;
+  if(!id)return alert("選手IDを入力して");
+  const data={
+    nige:val("nige"+i),
+    nigashi:val("nigashi"+i),
+    sashi:val("sashi"+i),
+    makuri:val("makuri"+i),
+    ms:val("ms"+i),
+    turn:val("turn"+i)
+  };
+  localStorage.setItem("player_"+id,JSON.stringify(data));
+  alert("保存しました");
 }
 
-function load(i){
- let id=document.getElementById("id"+i).value;
- let d=JSON.parse(localStorage.getItem("p_"+id)||"null");
- if(!d)return;
-
- nige[i].value=d.nige;
- nigashi[i].value=d.nigashi;
- sashi[i].value=d.sashi;
- makuri[i].value=d.makuri;
- ms[i].value=d.ms;
+function loadPlayer(i){
+  const id=document.getElementById("id"+i).value;
+  if(!id)return alert("選手IDを入力して");
+  const data=JSON.parse(localStorage.getItem("player_"+id)||"null");
+  if(!data)return alert("保存データなし");
+  setVal("nige"+i,data.nige);
+  setVal("nigashi"+i,data.nigashi);
+  setVal("sashi"+i,data.sashi);
+  setVal("makuri"+i,data.makuri);
+  setVal("ms"+i,data.ms);
+  setVal("turn"+i,data.turn);
 }
 
-function predict(){
- let arr=[];
- for(let i=1;i<=6;i++){
-  let s=0;
+function placeId(place){
+  const map={
+    "桐生":1,"戸田":2,"江戸川":3,"平和島":4,"多摩川":5,
+    "浜名湖":6,"蒲郡":7,"常滑":8,"津":9,"三国":10,
+    "びわこ":11,"住之江":12,"尼崎":13,"鳴門":14,"丸亀":15,
+    "児島":16,"宮島":17,"徳山":18,"下関":19,"若松":20,
+    "芦屋":21,"福岡":22,"唐津":23,"大村":24
+  };
+  return map[place];
+}
 
-  s+= (0.2-val("avgst"+i))*100;
-  s+= (0.2-val("exst"+i))*80;
-  s+= (7-val("ex"+i))*10;
+function placeCode2(place){
+  return String(placeId(place)).padStart(2,"0");
+}
 
-  s+= val("motor"+i)*1.2;
-  s+= val("boat"+i)*1.0;
-  s+= val("win"+i)*5;
+function openMurao(){
+  const date=document.getElementById("date").value;
+  const place=document.getElementById("place").value;
+  const race=document.getElementById("race").value.replace("R","");
+  const stadiumId=placeId(place);
 
-  if(i==1)s+=val("nige"+i)*3;
-  if(i==2)s+=val("nigashi"+i)*2;
-
-  s+=val("sashi"+i)*2;
-  s+=val("makuri"+i)*2.5;
-  s+=val("ms"+i)*2.2;
-  s+=val("turn"+i)*1.5;
-
-  arr.push({n:i,s:s});
- }
-
- arr.sort((a,b)=>b.s-a.s);
-
- result.innerHTML=`
- 本線 <span class="ticket">${arr[0].n}-${arr[1].n}-${arr[2].n}</span><br>
- 対抗 ${arr[1].n}-${arr[0].n}-${arr[2].n}<br>
- 穴 ${arr[2].n}-${arr[0].n}-${arr[1].n}
- `;
+  const url=`https://kyotei.murao111.net/race_details?race[race_date]=${date}&race[stadium_id]=${stadiumId}&race[race_no]=${race}`;
+  window.open(url,"_blank");
 }
 
 function openOfficial(){
- window.open("https://www.boatrace.jp/");
+  const hd=document.getElementById("date").value.replaceAll("-","");
+  const place=document.getElementById("place").value;
+  const jcd=placeCode2(place);
+  const rno=document.getElementById("race").value.replace("R","");
+  const url=`https://www.boatrace.jp/owpc/pc/race/racelist?rno=${rno}&jcd=${jcd}&hd=${hd}`;
+  window.open(url,"_blank");
 }
 
 function openPoseidon(){
- window.open("https://poseidon-boatrace.net/");
+  const date=document.getElementById("date").value.replaceAll("-","");
+  const place=document.getElementById("place").value;
+  const race=document.getElementById("race").value;
+  const url=`https://poseidon-boatrace.net/race/${date}/${placeId(place)}/${race}`;
+  window.open(url,"_blank");
+}
+
+function venueBonus(place,b){
+  let score=0;
+  if(["大村","芦屋","徳山"].includes(place)){
+    if(b.no===1)score+=6;
+    if(b.lane<=2)score+=2;
+  }
+  if(["江戸川","平和島","福岡"].includes(place)){
+    if(b.turn>=7)score+=3;
+    if(b.lane>=4)score+=2;
+  }
+  if(["常滑","三国","津"].includes(place)){
+    if(b.turn>=7)score+=2;
+    if(b.motor>=40)score+=2;
+  }
+  if(["住之江","蒲郡","若松","丸亀"].includes(place)){
+    if(b.ex<=6.78)score+=3;
+    if(b.makuri>=7||b.ms>=7)score+=2;
+  }
+  return score;
+}
+
+function predict(){
+  const place=document.getElementById("place").value;
+  const race=document.getElementById("race").value;
+  const date=document.getElementById("date").value;
+  const front=document.getElementById("front").value;
+  const deep=document.getElementById("deep").value;
+  const wind=document.getElementById("wind").value;
+  const windSpeed=val("windSpeed");
+  const wave=document.getElementById("wave").value;
+  const tide=document.getElementById("tide").value;
+
+  let boats=[];
+  for(let i=1;i<=6;i++){
+    boats.push({
+      no:i,
+      avgst:val("avgst"+i),
+      exst:val("exst"+i),
+      ex:val("ex"+i),
+      tilt:val("tilt"+i),
+      motor:val("motor"+i),
+      boat:val("boat"+i),
+      win:val("win"+i),
+      lane:val("lane"+i),
+      nige:val("nige"+i),
+      nigashi:val("nigashi"+i),
+      sashi:val("sashi"+i),
+      makuri:val("makuri"+i),
+      ms:val("ms"+i),
+      turn:val("turn"+i),
+      score:0
+    });
+  }
+
+  boats.forEach(b=>{
+    let s=0;
+    s+=(0.20-b.avgst)*100;
+    s+=(0.20-b.exst)*80;
+    s+=(7.00-b.ex)*8;
+    s+=b.motor*1.0;
+    s+=b.boat*0.8;
+    s+=b.win*5;
+
+    if(b.no===1)s+=b.nige*3.0;
+    if(b.no===2)s+=b.nigashi*2.2;
+
+    s+=b.sashi*1.8;
+    s+=b.makuri*2.0;
+    s+=b.ms*2.2;
+    s+=b.turn*1.8;
+
+    if(b.tilt>0)s+=b.tilt*3;
+    if(b.tilt<0)s+=Math.abs(b.tilt)*1.5;
+
+    if(front==="yes"){
+      if(b.lane<=2)s-=6;
+      if(b.lane>=4)s+=3;
+    }
+
+    if(deep==="mid"){
+      if(b.no===1)s-=3;
+      if(b.lane>=4)s+=1;
+    }
+
+    if(deep==="high"){
+      if(b.no===1)s-=7;
+      if(b.lane>=4)s+=4;
+    }
+
+    if(wind==="head"){
+      if(b.lane<=2)s+=windSpeed*0.7;
+      if(b.lane>=4)s-=windSpeed*0.4;
+    }
+
+    if(wind==="tail"){
+      if(b.lane>=3)s+=windSpeed*0.7;
+      if(b.no===1)s-=windSpeed*0.3;
+    }
+
+    if(wind==="cross"){
+      s-=windSpeed*0.3;
+      if(b.turn>=7)s+=3;
+    }
+
+    if(wave==="rough"){
+      if(b.turn>=7)s+=3;
+      else s-=2;
+    }
+
+    if(wave==="bad"){
+      if(b.turn>=8)s+=2;
+      else s-=5;
+    }
+
+    if(tide==="rising"){
+      if(b.lane<=2)s+=2;
+      if(b.sashi>=7)s+=2;
+    }
+
+    if(tide==="falling"){
+      if(b.lane>=3)s+=2;
+      if(b.makuri>=7||b.ms>=7)s+=3;
+    }
+
+    s+=venueBonus(place,b);
+    b.score=s;
+  });
+
+  boats.sort((a,b)=>b.score-a.score);
+
+  const main=`${boats[0].no}-${boats[1].no}-${boats[2].no}`;
+  const sub=`${boats[1].no}-${boats[0].no}-${boats[2].no}`;
+  const hole=`${boats[2].no}-${boats[0].no}-${boats[1].no}`;
+
+  const bankroll=val("bankroll");
+  const budget=Math.max(500,Math.round(bankroll*0.03/100)*100);
+  const mainBet=Math.round(budget*0.55/100)*100;
+  const subBet=Math.round(budget*0.30/100)*100;
+  const holeBet=Math.max(100,budget-mainBet-subBet);
+
+  let rough=0;
+  if(boats[0].no!==1)rough+=25;
+  if(windSpeed>=4)rough+=15;
+  if(windSpeed>=6)rough+=15;
+  if(wave==="rough")rough+=15;
+  if(wave==="bad")rough+=30;
+  if(front==="yes")rough+=15;
+  if(deep==="high")rough+=15;
+
+  let roughLabel="低";
+  if(rough>=40)roughLabel="中";
+  if(rough>=70)roughLabel="高";
+
+  let html=`
+    <b>${date} ${place} ${race}</b><br>
+    風：${wind} ${windSpeed}m / 波：${wave} / 潮：${tide}<br>
+    荒れ度：<b>${roughLabel}</b><br><br>
+
+    <div>本線：<span class="ticket hot">${main}</span> ${mainBet}円</div>
+    <div>対抗：<span class="ticket">${sub}</span> ${subBet}円</div>
+    <div>穴：<span class="ticket">${hole}</span> ${holeBet}円</div>
+
+    <br><b>スコア順</b>
+  `;
+
+  boats.forEach(b=>{
+    html+=`<div class="row">${b.no}号艇：${b.score.toFixed(1)}点</div>`;
+  });
+
+  document.getElementById("result").innerHTML=html;
 }
 
 init();
-
 </script>
-
 </body>
 </html>
