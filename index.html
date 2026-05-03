@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>競艇 本気予想</title>
+<title>競艇 本気予想（手入力版）</title>
 
 <style>
 body{font-family:-apple-system;background:#f4f6f8;margin:0;padding:10px}
@@ -12,41 +12,34 @@ header{background:#053f8f;color:#fff;padding:14px;text-align:center;font-weight:
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 input,select{width:100%;height:36px;border-radius:6px;border:1px solid #ccc}
 button{width:100%;padding:10px;background:#053f8f;color:#fff;border:none;border-radius:8px;margin:5px 0}
+.green{background:#0a7f3f}
+.orange{background:#b36b00}
 .ticket{font-size:18px;background:#eef5ff;padding:6px;border-radius:6px}
 </style>
 </head>
 
 <body>
 
-<header>競艇 本気予想</header>
+<header>競艇 本気予想（手入力）</header>
 
 <div class="card">
 <div class="grid">
 <input type="date" id="date">
-
 <select id="place">
-<option value="23">唐津</option>
-<option value="22">福岡</option>
-<option value="24">大村</option>
+<option>唐津</option>
+<option>福岡</option>
+<option>大村</option>
 </select>
-
 <select id="race">
-<option value="1">1R</option>
-<option value="2">2R</option>
-<option value="3">3R</option>
-<option value="4">4R</option>
-<option value="5">5R</option>
-<option value="6">6R</option>
-<option value="7">7R</option>
-<option value="8">8R</option>
-<option value="9">9R</option>
-<option value="10">10R</option>
-<option value="11">11R</option>
-<option value="12">12R</option>
+<option>1R</option><option>2R</option><option>3R</option>
+<option>4R</option><option>5R</option><option>6R</option>
+<option>7R</option><option>8R</option><option>9R</option>
+<option>10R</option><option>11R</option><option>12R</option>
 </select>
 </div>
 
-<button onclick="loadData()">データ取得</button>
+<button class="orange" onclick="openOfficial()">公式を見る</button>
+<button class="orange" onclick="openPoseidon()">ポセイドン</button>
 </div>
 
 <div id="boats"></div>
@@ -58,130 +51,111 @@ button{width:100%;padding:10px;background:#053f8f;color:#fff;border:none;border-
 <script>
 
 function init(){
-  date.value = new Date().toISOString().slice(0,10);
-  makeInputs();
+ date.value=new Date().toISOString().slice(0,10);
+ make();
 }
 
-function makeInputs(){
-  let html="";
-  for(let i=1;i<=6;i++){
-    html+=`
-    <div class="card">
-    ${i}号艇
-    <input id="name${i}">
-    <input id="avgst${i}" value="0.15">
-    <input id="motor${i}" value="35">
-    <input id="boat${i}" value="35">
-    <input id="win${i}" value="5">
-    </div>`;
-  }
-  boats.innerHTML=html;
+function make(){
+ let html="";
+ for(let i=1;i<=6;i++){
+  html+=`
+  <div class="card">
+  <b>${i}号艇</b>
+  <input id="id${i}" placeholder="選手ID">
+  <input id="name${i}" placeholder="名前">
+
+  <button class="green" onclick="save(${i})">保存</button>
+  <button onclick="load(${i})">読込</button>
+
+  <div class="grid">
+  <input id="avgst${i}" placeholder="平均ST" value="0.15">
+  <input id="exst${i}" placeholder="展示ST" value="0.15">
+  <input id="ex${i}" placeholder="展示タイム" value="6.80">
+  <input id="motor${i}" placeholder="モーター" value="35">
+  <input id="boat${i}" placeholder="ボート" value="35">
+  <input id="win${i}" placeholder="勝率" value="5">
+
+  <input id="nige${i}" placeholder="逃げ" value="5">
+  <input id="nigashi${i}" placeholder="逃がし" value="5">
+  <input id="sashi${i}" placeholder="差し" value="5">
+  <input id="makuri${i}" placeholder="まくり" value="5">
+  <input id="ms${i}" placeholder="まくり差し" value="5">
+  <input id="turn${i}" placeholder="ターン" value="6">
+  </div>
+  </div>`;
+ }
+ boats.innerHTML=html;
 }
 
-function reset(){
-  for(let i=1;i<=6;i++){
-    name[i].value="";
-    avgst[i].value="0.15";
-    motor[i].value="35";
-    boat[i].value="35";
-    win[i].value="5";
-  }
+function val(id){return Number(document.getElementById(id).value||0)}
+
+function save(i){
+ let id=document.getElementById("id"+i).value;
+ if(!id)return alert("ID入れて");
+
+ let data={
+  nige:val("nige"+i),
+  nigashi:val("nigashi"+i),
+  sashi:val("sashi"+i),
+  makuri:val("makuri"+i),
+  ms:val("ms"+i)
+ };
+
+ localStorage.setItem("p_"+id,JSON.stringify(data));
+ alert("保存OK");
 }
 
-function getURL(){
-  let y=date.value.slice(0,4);
-  let d=date.value.replaceAll("-","");
-  return `https://boatraceopenapi.github.io/programs/v3/${y}/${d}.json`;
-}
+function load(i){
+ let id=document.getElementById("id"+i).value;
+ let d=JSON.parse(localStorage.getItem("p_"+id)||"null");
+ if(!d)return;
 
-async function loadData(){
-
-  reset(); // ←これ重要
-
-  let res = await fetch(getURL());
-  let json = await res.json();
-
-  let target = findRace(json);
-
-  if(!target){
-    result.innerHTML="データなし";
-    return;
-  }
-
-  let list = findEntries(target);
-
-  for(let i=1;i<=6;i++){
-    let r = list[i-1];
-    if(!r) continue;
-
-    name[i].value = pick(r,["name","racerName"]) || "";
-    avgst[i].value = pickNum(r,["averageStartTiming"]) || "0.15";
-    motor[i].value = pickNum(r,["motorQuinellaRate"]) || "35";
-    boat[i].value = pickNum(r,["boatQuinellaRate"]) || "35";
-    win[i].value = pickNum(r,["winningRate"]) || "5";
-  }
-
-  result.innerHTML="取得OK";
-}
-
-function findRace(data){
-
-  let p = place.value;
-  let r = Number(race.value);
-
-  let found=null;
-
-  JSON.stringify(data).split("},").forEach(chunk=>{
-    if(chunk.includes(`"jcd":"${p}"`) && chunk.includes(`"raceNumber":${r}`)){
-      try{
-        found=JSON.parse(chunk+"}");
-      }catch{}
-    }
-  });
-
-  return found;
-}
-
-function findEntries(obj){
-  let arr=[];
-  function walk(x){
-    if(!x) return;
-    if(Array.isArray(x)){
-      if(x.length>=6 && JSON.stringify(x).includes("racer")){
-        arr=x;
-      }
-      x.forEach(walk);
-    }else if(typeof x==="object"){
-      Object.values(x).forEach(walk);
-    }
-  }
-  walk(obj);
-  return arr;
-}
-
-function pick(o,keys){
-  for(let k in o){
-    if(keys.some(x=>k.includes(x))) return o[k];
-  }
-  return "";
-}
-
-function pickNum(o,keys){
-  let v=pick(o,keys);
-  return Number(v)||0;
+ nige[i].value=d.nige;
+ nigashi[i].value=d.nigashi;
+ sashi[i].value=d.sashi;
+ makuri[i].value=d.makuri;
+ ms[i].value=d.ms;
 }
 
 function predict(){
-  let arr=[];
-  for(let i=1;i<=6;i++){
-    let s=(0.2-avgst[i].value)*100+motor[i].value+boat[i].value+win[i].value*5;
-    arr.push({n:i,s:s});
-  }
-  arr.sort((a,b)=>b.s-a.s);
+ let arr=[];
+ for(let i=1;i<=6;i++){
+  let s=0;
 
-  result.innerHTML=`
-  本線 <span class="ticket">${arr[0].n}-${arr[1].n}-${arr[2].n}</span>
-  `;
+  s+= (0.2-val("avgst"+i))*100;
+  s+= (0.2-val("exst"+i))*80;
+  s+= (7-val("ex"+i))*10;
+
+  s+= val("motor"+i)*1.2;
+  s+= val("boat"+i)*1.0;
+  s+= val("win"+i)*5;
+
+  if(i==1)s+=val("nige"+i)*3;
+  if(i==2)s+=val("nigashi"+i)*2;
+
+  s+=val("sashi"+i)*2;
+  s+=val("makuri"+i)*2.5;
+  s+=val("ms"+i)*2.2;
+  s+=val("turn"+i)*1.5;
+
+  arr.push({n:i,s:s});
+ }
+
+ arr.sort((a,b)=>b.s-a.s);
+
+ result.innerHTML=`
+ 本線 <span class="ticket">${arr[0].n}-${arr[1].n}-${arr[2].n}</span><br>
+ 対抗 ${arr[1].n}-${arr[0].n}-${arr[2].n}<br>
+ 穴 ${arr[2].n}-${arr[0].n}-${arr[1].n}
+ `;
+}
+
+function openOfficial(){
+ window.open("https://www.boatrace.jp/");
+}
+
+function openPoseidon(){
+ window.open("https://poseidon-boatrace.net/");
 }
 
 init();
