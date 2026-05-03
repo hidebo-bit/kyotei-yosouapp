@@ -217,7 +217,9 @@ function applyProgramData(raceObj){
 
     if(id){setText("id"+i,String(id).replace(/\D/g,"")); loadPlayer(i);}
     if(name)setText("name"+i,String(name).replace(/\s+/g,""));
-    if(valid(avgst,0,1))setVal("avgst"+i,Number(avgst).toFixed(2));
+    if(valid(avgst,0.01,0.40)){
+  setVal("avgst"+i,Number(avgst).toFixed(2));
+}
     if(valid(win,0,10))setVal("win"+i,Number(win).toFixed(2));
     if(valid(motor,0,100))setVal("motor"+i,Number(motor).toFixed(1));
     if(valid(boat,0,100))setVal("boat"+i,Number(boat).toFixed(1));
