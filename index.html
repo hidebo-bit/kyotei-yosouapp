@@ -4,134 +4,568 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>競艇 本気展開予想</title>
-
 <style>
-body{font-family:-apple-system;background:#f4f6f8;margin:0;padding:10px}
-header{background:#053f8f;color:white;padding:14px;text-align:center;font-weight:bold;margin:-10px -10px 12px}
+body{font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;background:#f4f6f8;margin:0;padding:10px}
+header{background:#053f8f;color:white;padding:14px;text-align:center;font-weight:bold;font-size:18px;margin:-10px -10px 12px}
 .card{background:#fff;padding:14px;border-radius:14px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-input,select{width:100%;padding:7px;height:36px;border-radius:8px;border:1px solid #ccc}
-button{width:100%;padding:12px;background:#053f8f;color:#fff;border:none;border-radius:10px;margin:6px 0}
-.orange{background:#b36b00}.purple{background:#6b4cff}
-.ticket{font-size:20px;font-weight:bold;background:#eef5ff;padding:6px;border-radius:8px}
+label{font-size:12px;color:#555;display:block;margin-bottom:3px}
+input,select{width:100%;box-sizing:border-box;padding:7px 8px;height:38px;border-radius:8px;border:1px solid #ccc;font-size:15px}
+button{width:100%;padding:12px;background:#053f8f;color:#fff;border:none;border-radius:10px;font-weight:bold;margin:6px 0}
+.green{background:#117a35}.purple{background:#6b4cff}.orange{background:#b36b00}
+.ticket{display:inline-block;font-size:21px;font-weight:bold;background:#eef5ff;padding:8px 10px;border-radius:10px;margin:4px 0}
+.hot{background:#fff0e6}.row{padding:6px 0;border-bottom:1px solid #eee}.small{font-size:12px;color:#666}
 </style>
 </head>
 
 <body>
-
-<header>競艇 本気展開予想</header>
+<header>競艇 本気展開予想アプリ</header>
 
 <div class="card">
+<h2>レース設定</h2>
 <div class="grid">
-<input type="date" id="date">
-<select id="place">
-<option value="23">唐津</option>
-<option value="22">福岡</option>
-<option value="24">大村</option>
-</select>
-<select id="race"></select>
+<div><label>日付</label><input type="date" id="date"></div>
+
+<div><label>場</label><select id="place">
+<option value="01">桐生</option><option value="02">戸田</option><option value="03">江戸川</option>
+<option value="04">平和島</option><option value="05">多摩川</option><option value="06">浜名湖</option>
+<option value="07">蒲郡</option><option value="08">常滑</option><option value="09">津</option>
+<option value="10">三国</option><option value="11">びわこ</option><option value="12">住之江</option>
+<option value="13">尼崎</option><option value="14">鳴門</option><option value="15">丸亀</option>
+<option value="16">児島</option><option value="17">宮島</option><option value="18">徳山</option>
+<option value="19">下関</option><option value="20">若松</option><option value="21">芦屋</option>
+<option value="22">福岡</option><option value="23">唐津</option><option value="24">大村</option>
+</select></div>
+
+<div><label>レース</label><select id="race"></select></div>
+<div><label>資金</label><input type="number" id="bankroll" value="10000"></div>
+
+<div><label>前付け</label><select id="front"><option value="no">なし</option><option value="yes">あり</option></select></div>
+<div><label>深イン</label><select id="deep"><option value="low">低</option><option value="mid">中</option><option value="high">高</option></select></div>
+
+<div><label>風向き</label><select id="wind"><option value="normal">普通</option><option value="head">向かい風</option><option value="tail">追い風</option><option value="cross">横風</option></select></div>
+<div><label>風速(m)</label><input type="number" step="0.5" id="windSpeed" value="2"></div>
+
+<div><label>波</label><select id="wave"><option value="normal">普通</option><option value="rough">荒れ気味</option><option value="bad">かなり荒れ</option></select></div>
+<div><label>潮</label><select id="tide"><option value="none">影響少なめ</option><option value="high">満潮</option><option value="low">干潮</option><option value="rising">上げ潮</option><option value="falling">下げ潮</option></select></div>
 </div>
 
-<button class="orange" onclick="openOfficial()">公式</button>
-<button class="purple" onclick="loadOfficial()">公式取得</button>
-<button class="purple" onclick="loadPoseidon()">ポセイドン取得</button>
+<button class="purple" onclick="loadOpenApi()">Open API取得</button>
+<button class="orange" onclick="openOfficial()">公式を開く</button>
+<button class="orange" onclick="openPoseidon()">ポセイドンを開く</button>
+<p class="small">自動取得：選手ID・選手名・平均ST・勝率・モーター・ボート・展示タイム・チルト・展示進入。取れない項目は手入力で補正。</p>
 </div>
 
 <div id="boats"></div>
 
-<button onclick="predict()">予想</button>
+<button onclick="predict()">展開予想する</button>
 
 <div class="card">
-<div id="result"></div>
+<h2>予想結果</h2>
+<div id="result">ここに結果が出ます</div>
 </div>
 
 <script>
-
-const WORKER = "https://odd-surf-f27b.h-kobayashi-0131.workers.dev/";
-
 function init(){
- document.getElementById("date").value=new Date().toISOString().slice(0,10);
- for(let i=1;i<=12;i++){
-  let o=document.createElement("option");
-  o.value=i;o.text=i+"R";
-  race.appendChild(o);
- }
+  document.getElementById("date").value = new Date().toISOString().slice(0,10);
 
- let html="";
- for(let i=1;i<=6;i++){
-  html+=`
-  <div class="card">
-  ${i}号艇
-  <input id="name${i}" placeholder="名前">
-  <input id="avgst${i}" value="0.15">
-  <input id="motor${i}" value="35">
-  <input id="boat${i}" value="35">
-  <input id="win${i}" value="5">
-  </div>`;
- }
- boats.innerHTML=html;
+  const race = document.getElementById("race");
+  for(let i=1;i<=12;i++){
+    let o=document.createElement("option");
+    o.value=i;
+    o.textContent=i+"R";
+    race.appendChild(o);
+  }
+  race.value=1;
+
+  let html="";
+  for(let i=1;i<=6;i++){
+    html += `
+    <div class="card">
+      <h2>${i}号艇</h2>
+      <div class="grid">
+        <div><label>選手ID</label><input id="id${i}" placeholder="登録番号"></div>
+        <div><label>選手名</label><input id="name${i}" placeholder="選手名"></div>
+
+        <div><label>読込</label><button onclick="loadPlayer(${i})">特徴読込</button></div>
+        <div><label>保存</label><button class="green" onclick="savePlayer(${i})">特徴保存</button></div>
+
+        <div><label>平均ST</label><input type="number" step="0.01" id="avgst${i}" value="0.15"></div>
+        <div><label>進入</label><input type="number" id="lane${i}" value="${i}"></div>
+
+        <div><label>逃げ</label><input type="number" id="nige${i}" value="5"></div>
+        <div><label>逃がし</label><input type="number" id="nigashi${i}" value="5"></div>
+        <div><label>差し</label><input type="number" id="sashi${i}" value="5"></div>
+        <div><label>まくり</label><input type="number" id="makuri${i}" value="5"></div>
+        <div><label>まくり差し</label><input type="number" id="ms${i}" value="5"></div>
+        <div><label>ターン展示</label><input type="number" id="turn${i}" value="6"></div>
+
+        <div><label>展示ST</label><input type="number" step="0.01" id="exst${i}" value="0.15"></div>
+        <div><label>展示タイム</label><input type="number" step="0.01" id="ex${i}" value="6.80"></div>
+        <div><label>チルト</label><input type="number" step="0.5" id="tilt${i}" value="0"></div>
+
+        <div><label>モーター2連率</label><input type="number" step="0.1" id="motor${i}" value="35"></div>
+        <div><label>ボート2連率</label><input type="number" step="0.1" id="boat${i}" value="35"></div>
+        <div><label>勝率</label><input type="number" step="0.01" id="win${i}" value="5.00"></div>
+      </div>
+    </div>`;
+  }
+  document.getElementById("boats").innerHTML = html;
 }
 
-function getURL(type){
- let d=date.value.replaceAll("-","");
- let p=place.value;
- let r=race.value;
- if(type==="official"){
-  return `https://www.boatrace.jp/owpc/pc/race/racelist?rno=${r}&jcd=${p}&hd=${d}`;
- }
- return `https://poseidon-boatrace.net/race/${d}/${p}/${r}R`;
+function val(id){return Number(document.getElementById(id).value || 0)}
+function setVal(id,v){
+  const e=document.getElementById(id);
+  if(e && v!==null && v!==undefined && v!=="") e.value=v;
 }
+function setText(id,v){
+  const e=document.getElementById(id);
+  if(e && v!==null && v!==undefined && v!=="") e.value=String(v).replace(/\s+/g,"");
+}
+
+function getYmd(){return document.getElementById("date").value.replaceAll("-","")}
+function getYear(){return document.getElementById("date").value.slice(0,4)}
+function getPlaceCode(){return document.getElementById("place").value}
+function getPlaceNo(){return Number(getPlaceCode())}
+function getPlaceName(){return document.getElementById("place").selectedOptions[0].textContent}
+function getRaceNo(){return Number(document.getElementById("race").value)}
 
 function openOfficial(){
- window.open(getURL("official"));
+  const url = `https://www.boatrace.jp/owpc/pc/race/racelist?rno=${getRaceNo()}&jcd=${getPlaceCode()}&hd=${getYmd()}`;
+  window.open(url,"_blank");
 }
 
-async function loadOfficial(){
- let url=WORKER+"?url="+encodeURIComponent(getURL("official"));
- let res=await fetch(url);
- let data=await res.json();
- applyHTML(data.html);
+function openPoseidon(){
+  const url = `https://poseidon-boatrace.net/race/${getYmd()}/${getPlaceNo()}/${getRaceNo()}R`;
+  window.open(url,"_blank");
 }
 
-async function loadPoseidon(){
- let url=WORKER+"?url="+encodeURIComponent(getURL("poseidon"));
- let res=await fetch(url);
- let data=await res.json();
- applyHTML(data.html);
+async function loadOpenApi(){
+  const y = getYear();
+  const ymd = getYmd();
+
+  const programUrl = `https://boatraceopenapi.github.io/programs/v3/${y}/${ymd}.json`;
+  const previewUrl = `https://boatraceopenapi.github.io/previews/v3/${y}/${ymd}.json`;
+
+  try{
+    document.getElementById("result").innerHTML = "Open API取得中...";
+
+    const [programRes, previewRes] = await Promise.allSettled([
+      fetch(programUrl),
+      fetch(previewUrl)
+    ]);
+
+    const programs = programRes.status==="fulfilled" && programRes.value.ok ? await programRes.value.json() : null;
+    const previews = previewRes.status==="fulfilled" && previewRes.value.ok ? await previewRes.value.json() : null;
+
+    const programRace = findRace(programs);
+    const previewRace = findRace(previews);
+
+    if(!programRace && !previewRace){
+      document.getElementById("result").innerHTML = "データが見つかりません。公式/ポセイドンを開いて手入力してください。";
+      return;
+    }
+
+    applyProgram(programRace);
+    applyPreview(previewRace);
+
+    for(let i=1;i<=6;i++){
+      loadPlayer(i);
+      autoConvert(i);
+    }
+
+    predict();
+    alert("取得しました。数値は確認して使ってね。");
+  }catch(e){
+    alert("取得エラー：" + e.message);
+  }
 }
 
-function applyHTML(html){
- let text=html.replace(/<[^>]+>/g," ");
+function findRace(data){
+  if(!data) return null;
 
- let nums=text.match(/\d+\.\d+/g)||[];
+  const placeName = getPlaceName();
+  const placeCode = getPlaceCode();
+  const placeNo = String(getPlaceNo());
+  const raceNo = getRaceNo();
 
- for(let i=1;i<=6;i++){
-  if(nums[i]) avgst[i].value=nums[i];
-  if(nums[i+6]) win[i].value=nums[i+6];
- }
+  let best=null;
+  let bestScore=-1;
 
- let names=text.match(/[一-龥]{2,4}/g)||[];
- for(let i=1;i<=6;i++){
-  if(names[i]) name[i].value=names[i];
- }
+  function walk(x){
+    if(!x) return;
+
+    if(Array.isArray(x)){
+      x.forEach(walk);
+      return;
+    }
+
+    if(typeof x==="object"){
+      const text = JSON.stringify(x);
+      let score = 0;
+
+      if(text.includes(placeName)) score += 4;
+      if(text.includes(`"${placeCode}"`)) score += 2;
+      if(text.includes(`:${placeNo}`)) score += 1;
+
+      if(text.includes(`${raceNo}R`)) score += 3;
+      if(text.includes(`"raceNumber":${raceNo}`)) score += 5;
+      if(text.includes(`"race_number":${raceNo}`)) score += 5;
+      if(text.includes(`"raceNo":${raceNo}`)) score += 5;
+      if(text.includes(`"rno":${raceNo}`)) score += 5;
+
+      if(text.match(/racer|player|entry|motor|boat|exhibition|展示|選手|登録/gi)) score += 3;
+
+      if(score > bestScore && text.length > 300){
+        bestScore = score;
+        best = x;
+      }
+
+      Object.values(x).forEach(walk);
+    }
+  }
+
+  walk(data);
+  return bestScore >= 6 ? best : null;
+}
+
+function applyProgram(raceObj){
+  if(!raceObj) return;
+
+  const entries = extractEntries(raceObj);
+
+  for(let i=1;i<=6;i++){
+    const r = entries[i-1] || {};
+
+    const id = pick(r, [
+      "racerNumber","racer_number","registrationNumber","registration_number",
+      "toban","playerId","player_id","登番","登録番号"
+    ]);
+
+    const name = pick(r, [
+      "racerName","racer_name","playerName","player_name","name","選手名"
+    ]);
+
+    const avgst = pickNum(r, [
+      "averageStartTiming","average_start_timing","averageST","avgSt","st","ST","平均ST"
+    ]);
+
+    const win = pickNum(r, [
+      "nationalWinningRate","national_winning_rate","winningRate","winRate",
+      "racerWinningRate","勝率"
+    ]);
+
+    const motor = pickNum(r, [
+      "motorQuinellaRate","motor_quinella_rate","motor2","motorRate",
+      "motorTwoRate","モーター2連率"
+    ]);
+
+    const boat = pickNum(r, [
+      "boatQuinellaRate","boat_quinella_rate","boat2","boatRate",
+      "boatTwoRate","ボート2連率"
+    ]);
+
+    if(id){
+      setText("id"+i, String(id).replace(/\D/g,""));
+      loadPlayer(i);
+    }
+    if(name) setText("name"+i, name);
+
+    if(valid(avgst,0.01,0.40)) setVal("avgst"+i, Number(avgst).toFixed(2));
+    if(valid(win,1,10)) setVal("win"+i, Number(win).toFixed(2));
+    if(valid(motor,0,100)) setVal("motor"+i, Number(motor).toFixed(1));
+    if(valid(boat,0,100)) setVal("boat"+i, Number(boat).toFixed(1));
+  }
+}
+
+function applyPreview(raceObj){
+  if(!raceObj) return;
+
+  const entries = extractEntries(raceObj);
+
+  for(let i=1;i<=6;i++){
+    const r = entries[i-1] || {};
+
+    const ex = pickNum(r, [
+      "exhibitionTime","exhibition_time","展示タイム"
+    ]);
+
+    const exst = pickNum(r, [
+      "exhibitionStartTiming","exhibition_start_timing","startTiming","展示ST"
+    ]);
+
+    const tilt = pickNum(r, [
+      "tilt","チルト"
+    ]);
+
+    const lane = pickNum(r, [
+      "course","entryCourse","exhibitionCourse","進入","コース"
+    ]);
+
+    if(valid(ex,5,8)) setVal("ex"+i, Number(ex).toFixed(2));
+    if(valid(exst,-1,1)) setVal("exst"+i, Math.abs(Number(exst)).toFixed(2));
+    if(valid(tilt,-2,4)) setVal("tilt"+i, Number(tilt));
+    if(valid(lane,1,6)) setVal("lane"+i, Number(lane));
+  }
+}
+
+function extractEntries(obj){
+  let candidates=[];
+
+  function walk(x){
+    if(!x) return;
+
+    if(Array.isArray(x)){
+      const text = JSON.stringify(x);
+      const score = (text.match(/racer|player|registration|toban|登番|選手|motor|boat|exhibition|展示/gi)||[]).length;
+
+      if(x.length >= 6 && score >= 4){
+        candidates.push(x.slice(0,6));
+      }
+
+      x.forEach(walk);
+      return;
+    }
+
+    if(typeof x==="object"){
+      Object.values(x).forEach(walk);
+    }
+  }
+
+  walk(obj);
+
+  if(candidates.length === 0) return [];
+  candidates.sort((a,b)=>JSON.stringify(b).length - JSON.stringify(a).length);
+  return candidates[0];
+}
+
+function pick(obj,keys){
+  if(!obj) return "";
+
+  let found = "";
+
+  function walk(x){
+    if(found !== "" || !x) return;
+
+    if(Array.isArray(x)){
+      x.forEach(walk);
+      return;
+    }
+
+    if(typeof x === "object"){
+      for(let k in x){
+        const low = String(k).toLowerCase();
+        if(keys.some(key => low.includes(String(key).toLowerCase()))){
+          if(typeof x[k] !== "object" && x[k] !== null && x[k] !== ""){
+            found = x[k];
+            return;
+          }
+        }
+      }
+
+      Object.values(x).forEach(walk);
+    }
+  }
+
+  walk(obj);
+  return found;
+}
+
+function pickNum(obj,keys){
+  const v = pick(obj,keys);
+  if(v==="" || v===null || v===undefined) return null;
+  if(typeof v==="number") return v;
+
+  const m = String(v).replace("%","").match(/-?\d+(\.\d+)?/);
+  return m ? Number(m[0]) : null;
+}
+
+function valid(n,min,max){
+  return typeof n==="number" && !isNaN(n) && n>=min && n<=max;
+}
+
+function autoConvert(i){
+  let motor = val("motor"+i);
+  let boat = val("boat"+i);
+  let win = val("win"+i);
+
+  let turn = 5;
+  let sashi = val("sashi"+i);
+  let makuri = val("makuri"+i);
+  let ms = val("ms"+i);
+
+  if(motor >= 50){ makuri += 2; ms += 1; }
+  else if(motor >= 40){ makuri += 1; ms += 1; }
+  else if(motor <= 25){ makuri -= 1; }
+
+  if(boat >= 50){ turn += 2; sashi += 1; }
+  else if(boat >= 40){ turn += 1; }
+  else if(boat <= 25){ turn -= 1; }
+
+  if(win >= 7){ sashi += 2; ms += 2; makuri += 1; }
+  else if(win >= 6){ sashi += 1; ms += 1; }
+  else if(win <= 4){ sashi -= 1; ms -= 1; }
+
+  setVal("turn"+i, clamp(turn,1,10));
+  setVal("sashi"+i, clamp(sashi,1,10));
+  setVal("makuri"+i, clamp(makuri,1,10));
+  setVal("ms"+i, clamp(ms,1,10));
+}
+
+function savePlayer(i){
+  let id = document.getElementById("id"+i).value;
+  if(!id) return alert("選手IDを入力して");
+
+  let data = {
+    nige:val("nige"+i),
+    nigashi:val("nigashi"+i),
+    sashi:val("sashi"+i),
+    makuri:val("makuri"+i),
+    ms:val("ms"+i)
+  };
+
+  localStorage.setItem("player_"+id, JSON.stringify(data));
+  alert("選手特徴を保存しました");
+}
+
+function loadPlayer(i){
+  let id = document.getElementById("id"+i).value;
+  if(!id) return;
+
+  let data = JSON.parse(localStorage.getItem("player_"+id) || "null");
+  if(!data) return;
+
+  setVal("nige"+i, data.nige);
+  setVal("nigashi"+i, data.nigashi);
+  setVal("sashi"+i, data.sashi);
+  setVal("makuri"+i, data.makuri);
+  setVal("ms"+i, data.ms);
+}
+
+function clamp(n,min,max){
+  return Math.max(min, Math.min(max,n));
 }
 
 function predict(){
- let score=[];
- for(let i=1;i<=6;i++){
-  let s=(0.2-avgst[i].value)*100+motor[i].value+boat[i].value+win[i].value*5;
-  score.push({n:i,s:s});
- }
- score.sort((a,b)=>b.s-a.s);
+  let boats=[];
+  let front=document.getElementById("front").value;
+  let deep=document.getElementById("deep").value;
+  let wind=document.getElementById("wind").value;
+  let windSpeed=val("windSpeed");
+  let wave=document.getElementById("wave").value;
+  let tide=document.getElementById("tide").value;
 
- result.innerHTML=`
- 本線 <span class="ticket">${score[0].n}-${score[1].n}-${score[2].n}</span><br>
- 対抗 ${score[1].n}-${score[0].n}-${score[2].n}
- `;
+  for(let i=1;i<=6;i++){
+    boats.push({
+      no:i,
+      lane:val("lane"+i),
+      nige:val("nige"+i),
+      nigashi:val("nigashi"+i),
+      sashi:val("sashi"+i),
+      makuri:val("makuri"+i),
+      ms:val("ms"+i),
+      avgst:val("avgst"+i),
+      exst:val("exst"+i),
+      ex:val("ex"+i),
+      turn:val("turn"+i),
+      tilt:val("tilt"+i),
+      score:0
+    });
+  }
+
+  boats.forEach(b=>{
+    if(b.no===1) b.score += b.nige*2.0;
+    if(b.no===2) b.score += b.nigashi*1.5;
+
+    b.score += b.sashi*1.0;
+    b.score += b.ms*1.1;
+
+    if(b.no>=3) b.score += b.makuri*1.2;
+
+    b.score += (7-b.ex)*5;
+    b.score += (0.2-b.exst)*50;
+    b.score += (0.2-b.avgst)*35;
+    b.score += b.turn*1.2;
+
+    if(b.tilt>0) b.score += b.tilt*1.5;
+
+    if(front==="yes"){
+      if(b.lane<=2) b.score -= 5;
+      if(b.lane>=4) b.score += 2;
+    }
+
+    if(deep==="mid" && b.no===1) b.score -= 3;
+    if(deep==="high" && b.no===1) b.score -= 6;
+    if(deep==="high" && b.no>=4) b.score += 3;
+
+    if(wind==="head"){
+      if(b.no<=2) b.score += windSpeed*.6;
+      if(b.no>=4) b.score -= windSpeed*.4;
+    }
+
+    if(wind==="tail"){
+      if(b.no>=3) b.score += windSpeed*.6;
+      if(b.no===1) b.score -= windSpeed*.3;
+    }
+
+    if(wind==="cross"){
+      b.score -= windSpeed*.3;
+      if(b.turn>=7) b.score += 2;
+    }
+
+    if(wave==="rough"){
+      if(b.turn>=7) b.score += 2;
+      else b.score -= 2;
+    }
+
+    if(wave==="bad"){
+      if(b.turn>=8) b.score += 2;
+      else b.score -= 4;
+    }
+
+    if(tide==="rising"){
+      if(b.no<=2) b.score += 2;
+      if(b.sashi>=7) b.score += 1;
+    }
+
+    if(tide==="falling"){
+      if(b.no>=3) b.score += 2;
+      if(b.ms>=7 || b.makuri>=7) b.score += 1.5;
+    }
+  });
+
+  boats.sort((a,b)=>b.score-a.score);
+
+  let main = `${boats[0].no}-${boats[1].no}-${boats[2].no}`;
+  let sub = `${boats[1].no}-${boats[0].no}-${boats[2].no}`;
+  let hole = `${boats[2].no}-${boats[0].no}-${boats[1].no}`;
+
+  let bankroll = val("bankroll");
+  let budget = Math.max(500, Math.round(bankroll*.03/100)*100);
+  let mainBet = Math.round(budget*.55/100)*100;
+  let subBet = Math.round(budget*.30/100)*100;
+  let holeBet = Math.max(100,budget-mainBet-subBet);
+
+  let date=document.getElementById("date").value;
+  let placeName=getPlaceName();
+  let race=document.getElementById("race").value+"R";
+
+  let res = `<b>${date} ${placeName} ${race}</b><br>
+  風：${wind} ${windSpeed}m / 波：${wave} / 潮：${tide}<br><br>
+  <div>本線：<span class="ticket hot">${main}</span> ${mainBet}円</div>
+  <div>対抗：<span class="ticket">${sub}</span> ${subBet}円</div>
+  <div>穴：<span class="ticket">${hole}</span> ${holeBet}円</div>
+  <br><b>スコア順</b>`;
+
+  boats.forEach(b=>{
+    res += `<div class="row">${b.no}号艇：${b.score.toFixed(1)}点</div>`;
+  });
+
+  document.getElementById("result").innerHTML = res;
 }
 
 init();
-
 </script>
+
 </body>
 </html>
