@@ -564,8 +564,15 @@ function predict(){
   document.getElementById("result").innerHTML = res;
 }
 
+function setupAutoUpdate(){
+  ["place","race","date"].forEach(id=>{
+    document.getElementById(id).addEventListener("change", ()=>{
+      document.getElementById("result").innerHTML =
+        "レース条件を変更しました。必要ならOpen API取得を押してください。";
+    });
+  });
 init();
-</script>
+setupAutoUpdate();
 
 </body>
 </html>
