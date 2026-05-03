@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>競艇 本気展開予想</title>
+
 <style>
 body{font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;background:#f4f6f8;margin:0;padding:10px}
 header{background:#053f8f;color:white;padding:14px;text-align:center;font-weight:bold;font-size:18px;margin:-10px -10px 12px}
@@ -53,7 +54,7 @@ button{width:100%;padding:12px;background:#053f8f;color:#fff;border:none;border-
 
 <button class="orange" onclick="openPoseidon()">ポセイドンを開く</button>
 <button class="purple" onclick="loadPoseidon()">ポセイドンから取得</button>
-<p class="small">ポセイドンを開いて確認 → 取得ボタンで数値反映。抽出できない時は手入力でOK。</p>
+<p class="small">取得がズレた時は手入力で修正してOK。</p>
 </div>
 
 <div id="boats"></div>
@@ -71,7 +72,8 @@ const WORKER_BASE = "https://odd-surf-f27b.h-kobayashi-0131.workers.dev/";
 function init(){
   document.getElementById("date").value = new Date().toISOString().slice(0,10);
 
-  let race = document.getElementById("race");
+  const race = document.getElementById("race");
+  race.innerHTML = "";
   for(let i=1;i<=12;i++){
     let o=document.createElement("option");
     o.value=i;
@@ -143,6 +145,14 @@ async function loadPoseidon(){
       return;
     }
 
+    applyPoseidonHtml(data.html);
+    predict();
+    alert("ポセイドンから取得しました。数値確認してね。");
+  }catch(e){
+    alert("エラー：" + e.message);
+  }
+}
+
 function applyPoseidonHtml(html){
   const doc = new DOMParser().parseFromString(html, "text/html");
   const lines = doc.body.innerText
@@ -162,116 +172,71 @@ function applyPoseidonEntryTable(lines){
   for(let idx=0; idx<lines.length; idx++){
     const line = lines[idx];
 
-    // 例：1 河内 悠利杏 B1
     const m = line.match(/^([1-6])\s+(.+?)\s+(A1|A2|B1|B2)$/);
     if(!m) continue;
 
     const no = Number(m[1]);
     const name = m[2].replace(/\s+/g, "");
 
-    const l1 = lines[idx+1] || "";
-    const l2 = lines[idx+2] || "";
-    const l3 = lines[idx+3] || "";
-    const l4 = lines[idx+4] || "";
-
-    const n1 = nums(l1);
-    const n2 = nums(l2);
-    const n3 = nums(l3);
-    const n4 = nums(l4);
-
-    // l1: 支部 平均ST 全国勝率 全国2連率 当地勝率
-    const avgst = n1[0];
-    const win = n1[1];
-
-    // l3: モーター2連率 No.xx
-    const motorRate = n3[0];
-
-    // l4: ボート2連率
-    const boatRate = n4[0];
+    let block = lines.slice(idx, idx+12).join(" ");
+    let numbers = nums(block);
 
     setVal(`name${no}`, name);
 
+    let avgst = findNumberNear(block, ["平均ST","ST"], 0, 1);
+    let win = findNumberNear(block, ["全国勝率","勝率"], 1, 10);
+    let motorRate = findNumberNear(block, ["モーター","モーター2連率"], 0, 100);
+    let boatRate = findNumberNear(block, ["ボート","ボート2連率"], 0, 100);
+
     if(valid(avgst,0,1)) setVal(`avgst${no}`, avgst.toFixed(2));
-    if(valid(win,0,10)) setVal(`win${no}`, win.toFixed(2));
+    if(valid(win,1,10)) setVal(`win${no}`, win.toFixed(2));
     if(valid(motorRate,0,100)) setVal(`motor${no}`, motorRate.toFixed(1));
     if(valid(boatRate,0,100)) setVal(`boat${no}`, boatRate.toFixed(1));
   }
 }
 
 function applyPoseidonNewConcept(lines){
-  // 登録番号
-  const idIndex = lines.findIndex(x => x.includes("1号艇") && x.includes("6号艇"));
-  if(idIndex >= 0){
-    const ids = nums(lines[idIndex+1] || "").filter(x => x >= 1000);
+  const all = lines.join(" ");
+
+  const ids = all.match(/\b\d{4}\b/g);
+  if(ids && ids.length >= 6){
     for(let i=1;i<=6;i++){
-      if(ids[i-1]){
-        setVal(`id${i}`, ids[i-1]);
-        loadPlayer(i);
-      }
+      setVal(`id${i}`, ids[i-1]);
+      loadPlayer(i);
     }
   }
 
-  // 1着率・逃がし率
-  const firstRateIndex = lines.findIndex(x => x.includes("1着率") && x.includes("逃がし率"));
-  if(firstRateIndex >= 0){
-    const section = collectUntil(lines, firstRateIndex, "差され率").join(" ");
-    const p = percents(section);
+  applyRateSection(lines, "1着率", "nige");
+  applyRateSection(lines, "逃がし率", "nigashi");
+  applyRateSection(lines, "差し率", "sashi");
+  applyRateSection(lines, "まくり率", "makuri");
+  applyRateSection(lines, "2連対率", "ms");
+}
 
-    // 1号艇の逃げ評価
-    if(p[0] !== undefined){
-      setVal("nige1", rateToScore(p[0]));
-    }
+function applyRateSection(lines, keyword, field){
+  let idx = lines.findIndex(x => x.includes(keyword));
+  if(idx < 0) return;
 
-    // 2号艇の逃がし評価
-    if(p[1] !== undefined){
-      setVal("nigashi2", rateToScore(p[1]));
-    }
-  }
+  let section = lines.slice(idx, idx+8).join(" ");
+  let p = percents(section);
 
-  // 差し率
-  const sashiIndex = lines.findIndex(x => x.includes("差し率"));
-  if(sashiIndex >= 0){
-    const section = collectUntil(lines, sashiIndex, "まくられ率").join(" ");
-    const p = percents(section);
-    for(let i=1;i<=6;i++){
-      if(p[i-1] !== undefined){
-        setVal(`sashi${i}`, rateToScore(p[i-1]));
-      }
-    }
-  }
-
-  // まくり率
-  const makuriIndex = lines.findIndex(x => x.includes("まくり率"));
-  if(makuriIndex >= 0){
-    const section = collectUntil(lines, makuriIndex, "2連対率").join(" ");
-    const p = percents(section);
-    for(let i=1;i<=6;i++){
-      if(p[i-1] !== undefined){
-        setVal(`makuri${i}`, rateToScore(p[i-1]));
-      }
-    }
-  }
-
-  // 2連対率 → まくり差し/道中力寄りに反映
-  const renIndex = lines.findIndex(x => x.includes("2連対率"));
-  if(renIndex >= 0){
-    const section = collectUntil(lines, renIndex, "※").join(" ");
-    const p = percents(section);
-    for(let i=1;i<=6;i++){
-      if(p[i-1] !== undefined){
-        setVal(`ms${i}`, rateToScore(p[i-1]));
-      }
+  for(let i=1;i<=6;i++){
+    if(p[i-1] !== undefined){
+      setVal(`${field}${i}`, rateToScore(p[i-1]));
     }
   }
 }
 
-function collectUntil(lines,startIndex,endWord){
-  const arr = [];
-  for(let i=startIndex+1;i<lines.length;i++){
-    if(lines[i].includes(endWord)) break;
-    arr.push(lines[i]);
+function findNumberNear(text, keys, min, max){
+  for(let key of keys){
+    let idx = text.indexOf(key);
+    if(idx >= 0){
+      let part = text.slice(idx, idx+120);
+      let arr = nums(part).filter(n => n >= min && n <= max);
+      if(arr.length) return arr[0];
+    }
   }
-  return arr;
+  return null;
 }
 
 function nums(text){
@@ -298,53 +263,10 @@ function rateToScore(rate){
   if(rate > 0) return 4;
   return 3;
 }
-    if(name) setVal("name"+i,name);
-
-    if(avgst) setVal("avgst"+i,avgst);
-    if(win) setVal("win"+i,win);
-    if(motor) setVal("motor"+i,motor);
-    if(boat) setVal("boat"+i,boat);
-
-    autoConvert(i);
-  }
-}
-
-function getBoatText(text,no){
-  let marker1 = `${no} `;
-  let idx = text.indexOf(marker1);
-  if(idx < 0) idx = text.indexOf(`${no}号艇`);
-  if(idx < 0) return text;
-  let next = text.indexOf(`${no+1} `, idx+10);
-  if(no===6 || next<0) next = idx + 900;
-  return text.slice(idx, next);
-}
-
-function pickFirst(text, regex){
-  let m=text.match(regex);
-  return m ? m[1] : "";
-}
-
-function pickNear(text, keys, regex){
-  for(let k of keys){
-    let idx=text.indexOf(k);
-    if(idx>=0){
-      let part=text.slice(idx, idx+120);
-      let m=part.match(regex);
-      if(m) return m[0];
-    }
-  }
-  let m=text.match(regex);
-  return m ? m[0] : "";
-}
-
-function guessName(text){
-  let m=text.match(/([一-龥ぁ-んァ-ン]{2,6})\s+(A1|A2|B1|B2)/);
-  return m ? m[1] : "";
-}
 
 function autoConvert(i){
   let motor=val("motor"+i), boat=val("boat"+i), win=val("win"+i);
-  let turn=5, sashi=5, makuri=5, ms=5;
+  let turn=5, sashi=val("sashi"+i), makuri=val("makuri"+i), ms=val("ms"+i);
 
   if(motor>=50){makuri+=2;ms+=1}
   else if(motor>=40){makuri+=1;ms+=1}
