@@ -14,7 +14,6 @@ label{font-size:12px;color:#555;display:block;margin-bottom:3px}
 input,select{width:100%;height:40px;border-radius:10px;border:1px solid #ccc;padding:8px;font-size:15px;box-sizing:border-box}
 input[type="date"]{appearance:none;-webkit-appearance:none;color:#111}
 button{width:100%;padding:14px;border:none;border-radius:12px;font-weight:bold;margin:8px 0;font-size:16px;background:#053f8f;color:#fff}
-button:active{transform:scale(.97)}
 .green{background:#117a35}
 .orange{background:#b36b00}
 .purple{background:linear-gradient(135deg,#6b4cff,#9a6bff);box-shadow:0 4px 12px rgba(107,76,255,.35)}
@@ -37,15 +36,8 @@ button:active{transform:scale(.97)}
 <h2>レース設定</h2>
 
 <div class="grid">
-  <div>
-    <label>日付</label>
-    <input type="date" id="date">
-  </div>
-
-  <div>
-    <label>場</label>
-    <input value="唐津" disabled>
-  </div>
+  <div><label>日付</label><input type="date" id="date"></div>
+  <div><label>場</label><input value="唐津" disabled></div>
 
   <div>
     <label>レース</label>
@@ -56,62 +48,16 @@ button:active{transform:scale(.97)}
     </select>
   </div>
 
-  <div>
-    <label>資金</label>
-    <input type="number" id="bankroll" value="10000">
-  </div>
+  <div><label>資金</label><input type="number" id="bankroll" value="10000"></div>
 
-  <div>
-    <label>前付け</label>
-    <select id="front">
-      <option value="no">なし</option>
-      <option value="yes">あり</option>
-    </select>
-  </div>
+  <div><label>前付け</label><select id="front"><option value="no">なし</option><option value="yes">あり</option></select></div>
+  <div><label>深イン</label><select id="deep"><option value="low">低</option><option value="mid">中</option><option value="high">高</option></select></div>
 
-  <div>
-    <label>深イン</label>
-    <select id="deep">
-      <option value="low">低</option>
-      <option value="mid">中</option>
-      <option value="high">高</option>
-    </select>
-  </div>
+  <div><label>風向き</label><select id="wind"><option value="normal">普通</option><option value="head">向かい風</option><option value="tail">追い風</option><option value="cross">横風</option></select></div>
+  <div><label>風速(m)</label><input type="number" step="0.5" id="windSpeed" value="2"></div>
 
-  <div>
-    <label>風向き</label>
-    <select id="wind">
-      <option value="normal">普通</option>
-      <option value="head">向かい風</option>
-      <option value="tail">追い風</option>
-      <option value="cross">横風</option>
-    </select>
-  </div>
-
-  <div>
-    <label>風速(m)</label>
-    <input type="number" step="0.5" id="windSpeed" value="2">
-  </div>
-
-  <div>
-    <label>波</label>
-    <select id="wave">
-      <option value="normal">普通</option>
-      <option value="rough">荒れ気味</option>
-      <option value="bad">かなり荒れ</option>
-    </select>
-  </div>
-
-  <div>
-    <label>潮</label>
-    <select id="tide">
-      <option value="none">影響少なめ</option>
-      <option value="high">満潮</option>
-      <option value="low">干潮</option>
-      <option value="rising">上げ潮</option>
-      <option value="falling">下げ潮</option>
-    </select>
-  </div>
+  <div><label>波</label><select id="wave"><option value="normal">普通</option><option value="rough">荒れ気味</option><option value="bad">かなり荒れ</option></select></div>
+  <div><label>潮</label><select id="tide"><option value="none">影響少なめ</option><option value="high">満潮</option><option value="low">干潮</option><option value="rising">上げ潮</option><option value="falling">下げ潮</option></select></div>
 </div>
 
 <button class="orange" onclick="openKaratsuPdf()">出走表PDFを開く</button>
@@ -144,15 +90,8 @@ function makeInputs(){
       <h2>${i}号艇</h2>
 
       <div class="grid">
-        <div>
-          <label>選手ID</label>
-          <input id="id${i}" placeholder="登録番号">
-        </div>
-
-        <div>
-          <label>選手名</label>
-          <input id="name${i}" placeholder="名前">
-        </div>
+        <div><label>選手ID</label><input id="id${i}" placeholder="登録番号"></div>
+        <div><label>選手名</label><input id="name${i}" placeholder="名前"></div>
 
         <div>
           <label>級別</label>
@@ -164,85 +103,26 @@ function makeInputs(){
           </select>
         </div>
 
-        <div>
-          <label>平均ST</label>
-          <input type="number" step="0.01" id="avgst${i}" value="0.15">
-        </div>
+        <div><label>平均ST</label><input type="number" step="0.01" id="avgst${i}" value="0.15"></div>
+        <div><label>展示ST</label><input type="number" step="0.01" id="exst${i}" value="0.15"></div>
+        <div><label>展示タイム</label><input type="number" step="0.01" id="ex${i}" value="6.80"></div>
+        <div><label>チルト</label><input type="number" step="0.5" id="tilt${i}" value="0"></div>
 
-        <div>
-          <label>展示ST</label>
-          <input type="number" step="0.01" id="exst${i}" value="0.15">
-        </div>
+        <div><label>モーター番号</label><input type="number" id="motorNo${i}" placeholder="例 16"></div>
+        <div><label>モーター2連率</label><input type="number" step="0.1" id="motor${i}" value="35"></div>
 
-        <div>
-          <label>展示タイム</label>
-          <input type="number" step="0.01" id="ex${i}" value="6.80">
-        </div>
+        <div><label>ボート番号</label><input type="number" id="boatNo${i}" placeholder="例 42"></div>
+        <div><label>ボート2連率</label><input type="number" step="0.1" id="boat${i}" value="35"></div>
 
-        <div>
-          <label>チルト</label>
-          <input type="number" step="0.5" id="tilt${i}" value="0">
-        </div>
+        <div><label>勝率</label><input type="number" step="0.01" id="win${i}" value="5.00"></div>
+        <div><label>進入</label><input type="number" id="lane${i}" value="${i}"></div>
 
-        <div>
-          <label>モーター番号</label>
-          <input type="number" id="motorNo${i}" placeholder="例 16">
-        </div>
-
-        <div>
-          <label>モーター2連率</label>
-          <input type="number" step="0.1" id="motor${i}" value="35">
-        </div>
-
-        <div>
-          <label>ボート番号</label>
-          <input type="number" id="boatNo${i}" placeholder="例 42">
-        </div>
-
-        <div>
-          <label>ボート2連率</label>
-          <input type="number" step="0.1" id="boat${i}" value="35">
-        </div>
-
-        <div>
-          <label>勝率</label>
-          <input type="number" step="0.01" id="win${i}" value="5.00">
-        </div>
-
-        <div>
-          <label>進入</label>
-          <input type="number" id="lane${i}" value="${i}">
-        </div>
-
-        <div>
-          <label>逃げ</label>
-          <input type="number" id="nige${i}" value="5">
-        </div>
-
-        <div>
-          <label>逃がし</label>
-          <input type="number" id="nigashi${i}" value="5">
-        </div>
-
-        <div>
-          <label>差し</label>
-          <input type="number" id="sashi${i}" value="5">
-        </div>
-
-        <div>
-          <label>まくり</label>
-          <input type="number" id="makuri${i}" value="5">
-        </div>
-
-        <div>
-          <label>まくり差し</label>
-          <input type="number" id="ms${i}" value="5">
-        </div>
-
-        <div>
-          <label>ターン展示</label>
-          <input type="number" id="turn${i}" value="6">
-        </div>
+        <div><label>逃げ</label><input type="number" id="nige${i}" value="5"></div>
+        <div><label>逃がし</label><input type="number" id="nigashi${i}" value="5"></div>
+        <div><label>差し</label><input type="number" id="sashi${i}" value="5"></div>
+        <div><label>まくり</label><input type="number" id="makuri${i}" value="5"></div>
+        <div><label>まくり差し</label><input type="number" id="ms${i}" value="5"></div>
+        <div><label>ターン展示</label><input type="number" id="turn${i}" value="6"></div>
       </div>
 
       <button class="green" onclick="savePlayer(${i})">特徴保存</button>
@@ -260,6 +140,58 @@ function val(id){
 function setVal(id,v){
   const el = document.getElementById(id);
   if(el) el.value = v;
+}
+
+function getPlayerId(i){
+  return String(document.getElementById("id"+i).value || "")
+    .trim()
+    .replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
+}
+
+function savePlayer(i){
+  const id = getPlayerId(i);
+  if(!id){
+    alert("選手IDを入力して");
+    return;
+  }
+
+  const data = {
+    rank:document.getElementById("rank"+i).value,
+    nige:val("nige"+i),
+    nigashi:val("nigashi"+i),
+    sashi:val("sashi"+i),
+    makuri:val("makuri"+i),
+    ms:val("ms"+i),
+    turn:val("turn"+i)
+  };
+
+  localStorage.setItem("karatsu_player_" + id, JSON.stringify(data));
+  alert("保存OK：" + id);
+}
+
+function loadPlayer(i){
+  const id = getPlayerId(i);
+  if(!id){
+    alert("選手IDを入力して");
+    return;
+  }
+
+  const data = JSON.parse(localStorage.getItem("karatsu_player_" + id) || "null");
+
+  if(!data){
+    alert("保存データなし：" + id);
+    return;
+  }
+
+  if(data.rank) document.getElementById("rank"+i).value = data.rank;
+  setVal("nige"+i,data.nige);
+  setVal("nigashi"+i,data.nigashi);
+  setVal("sashi"+i,data.sashi);
+  setVal("makuri"+i,data.makuri);
+  setVal("ms"+i,data.ms);
+  setVal("turn"+i,data.turn);
+
+  alert("読込OK：" + id);
 }
 
 function rankClass(rank){
@@ -282,40 +214,6 @@ function rankBonus(b){
   if(b.rank === "B2" && b.avgst >= 0.20) s -= 2;
 
   return s;
-}
-
-function savePlayer(i){
-  const id = document.getElementById("id"+i).value;
-  if(!id) return alert("選手IDを入力して");
-
-  const data = {
-    rank:document.getElementById("rank"+i).value,
-    nige:val("nige"+i),
-    nigashi:val("nigashi"+i),
-    sashi:val("sashi"+i),
-    makuri:val("makuri"+i),
-    ms:val("ms"+i),
-    turn:val("turn"+i)
-  };
-
-  localStorage.setItem("karatsu_player_"+id, JSON.stringify(data));
-  alert("保存しました");
-}
-
-function loadPlayer(i){
-  const id = document.getElementById("id"+i).value;
-  if(!id) return alert("選手IDを入力して");
-
-  const data = JSON.parse(localStorage.getItem("karatsu_player_"+id) || "null");
-  if(!data) return alert("保存データなし");
-
-  if(data.rank) document.getElementById("rank"+i).value = data.rank;
-  setVal("nige"+i,data.nige);
-  setVal("nigashi"+i,data.nigashi);
-  setVal("sashi"+i,data.sashi);
-  setVal("makuri"+i,data.makuri);
-  setVal("ms"+i,data.ms);
-  setVal("turn"+i,data.turn);
 }
 
 function clamp(n,min,max){
@@ -366,7 +264,6 @@ function predict(){
     s += b.motor * 1.0;
     s += b.boat * 0.8;
     s += b.win * 5;
-
     s += rankBonus(b);
 
     if(b.no === 1) s += b.nige * 3.2;
