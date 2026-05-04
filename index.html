@@ -20,7 +20,6 @@ button{width:100%;padding:14px;border:none;border-radius:12px;font-weight:bold;m
 .ticket{display:inline-block;font-size:22px;font-weight:bold;background:#eef5ff;padding:8px 12px;border-radius:10px;margin:4px 0}
 .hot{background:#fff0e6}
 .row{padding:7px 0;border-bottom:1px solid #eee}
-.small{font-size:12px;color:#666}
 .score{font-weight:bold}
 .rankA1{color:#d00000;font-weight:bold}
 .rankA2{color:#b36b00;font-weight:bold}
@@ -34,7 +33,6 @@ button{width:100%;padding:14px;border:none;border-radius:12px;font-weight:bold;m
 
 <div class="card">
 <h2>レース設定</h2>
-
 <div class="grid">
   <div><label>日付</label><input type="date" id="date"></div>
   <div><label>場</label><input value="唐津" disabled></div>
@@ -63,7 +61,6 @@ button{width:100%;padding:14px;border:none;border-radius:12px;font-weight:bold;m
 <button class="orange" onclick="openKaratsuPdf()">出走表PDFを開く</button>
 <button class="orange" onclick="openMotorPage()">モーターデータを開く</button>
 <button class="orange" onclick="openBoatPage()">ボートデータを開く</button>
-<p class="small">公式を見ながら手入力。選手IDで特徴保存できます。</p>
 </div>
 
 <div id="boats"></div>
@@ -125,8 +122,8 @@ function makeInputs(){
         <div><label>ターン展示</label><input type="number" id="turn${i}" value="6"></div>
       </div>
 
-      <button class="green" onclick="savePlayer(${i})">特徴保存</button>
-      <button onclick="loadPlayer(${i})">特徴読込</button>
+      <button class="green" onclick="savePlayer(${i})">全部保存</button>
+      <button onclick="loadPlayer(${i})">全部読込</button>
     </div>`;
   }
 
@@ -135,6 +132,10 @@ function makeInputs(){
 
 function val(id){
   return Number(document.getElementById(id).value || 0);
+}
+
+function textVal(id){
+  return document.getElementById(id).value || "";
 }
 
 function setVal(id,v){
@@ -156,7 +157,21 @@ function savePlayer(i){
   }
 
   const data = {
-    rank:document.getElementById("rank"+i).value,
+    name:textVal("name"+i),
+    rank:textVal("rank"+i),
+
+    avgst:val("avgst"+i),
+    exst:val("exst"+i),
+    ex:val("ex"+i),
+    tilt:val("tilt"+i),
+
+    motorNo:val("motorNo"+i),
+    motor:val("motor"+i),
+    boatNo:val("boatNo"+i),
+    boat:val("boat"+i),
+    win:val("win"+i),
+    lane:val("lane"+i),
+
     nige:val("nige"+i),
     nigashi:val("nigashi"+i),
     sashi:val("sashi"+i),
@@ -183,13 +198,27 @@ function loadPlayer(i){
     return;
   }
 
-  if(data.rank) document.getElementById("rank"+i).value = data.rank;
-  setVal("nige"+i,data.nige);
-  setVal("nigashi"+i,data.nigashi);
-  setVal("sashi"+i,data.sashi);
-  setVal("makuri"+i,data.makuri);
-  setVal("ms"+i,data.ms);
-  setVal("turn"+i,data.turn);
+  setVal("name"+i, data.name ?? "");
+  setVal("rank"+i, data.rank ?? "B1");
+
+  setVal("avgst"+i, data.avgst ?? "");
+  setVal("exst"+i, data.exst ?? "");
+  setVal("ex"+i, data.ex ?? "");
+  setVal("tilt"+i, data.tilt ?? "");
+
+  setVal("motorNo"+i, data.motorNo ?? "");
+  setVal("motor"+i, data.motor ?? "");
+  setVal("boatNo"+i, data.boatNo ?? "");
+  setVal("boat"+i, data.boat ?? "");
+  setVal("win"+i, data.win ?? "");
+  setVal("lane"+i, data.lane ?? i);
+
+  setVal("nige"+i, data.nige ?? 5);
+  setVal("nigashi"+i, data.nigashi ?? 5);
+  setVal("sashi"+i, data.sashi ?? 5);
+  setVal("makuri"+i, data.makuri ?? 5);
+  setVal("ms"+i, data.ms ?? 5);
+  setVal("turn"+i, data.turn ?? 6);
 
   alert("読込OK：" + id);
 }
@@ -216,26 +245,22 @@ function rankBonus(b){
   return s;
 }
 
-function clamp(n,min,max){
-  return Math.max(min, Math.min(max,n));
-}
-
 function predict(){
-  const date = document.getElementById("date").value;
-  const race = document.getElementById("race").value;
-  const front = document.getElementById("front").value;
-  const deep = document.getElementById("deep").value;
-  const wind = document.getElementById("wind").value;
+  const date = textVal("date");
+  const race = textVal("race");
+  const front = textVal("front");
+  const deep = textVal("deep");
+  const wind = textVal("wind");
   const windSpeed = val("windSpeed");
-  const wave = document.getElementById("wave").value;
-  const tide = document.getElementById("tide").value;
+  const wave = textVal("wave");
+  const tide = textVal("tide");
 
   let boats = [];
 
   for(let i=1;i<=6;i++){
     boats.push({
       no:i,
-      rank:document.getElementById("rank"+i).value,
+      rank:textVal("rank"+i),
       avgst:val("avgst"+i),
       exst:val("exst"+i),
       ex:val("ex"+i),
@@ -277,7 +302,6 @@ function predict(){
     if(b.tilt > 0) s += b.tilt * 3;
     if(b.tilt < 0) s += Math.abs(b.tilt) * 1.5;
 
-    // 唐津補正
     if(b.no === 1) s += 4;
     if(b.lane <= 2) s += 1.5;
     if(windSpeed >= 4 && (b.ms >= 7 || b.sashi >= 7)) s += 3;
