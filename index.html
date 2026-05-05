@@ -159,19 +159,16 @@ function savePlayer(i){
   const data = {
     name:textVal("name"+i),
     rank:textVal("rank"+i),
-
     avgst:val("avgst"+i),
     exst:val("exst"+i),
     ex:val("ex"+i),
     tilt:val("tilt"+i),
-
     motorNo:val("motorNo"+i),
     motor:val("motor"+i),
     boatNo:val("boatNo"+i),
     boat:val("boat"+i),
     win:val("win"+i),
     lane:val("lane"+i),
-
     nige:val("nige"+i),
     nigashi:val("nigashi"+i),
     sashi:val("sashi"+i),
@@ -200,19 +197,16 @@ function loadPlayer(i){
 
   setVal("name"+i, data.name ?? "");
   setVal("rank"+i, data.rank ?? "B1");
-
   setVal("avgst"+i, data.avgst ?? "");
   setVal("exst"+i, data.exst ?? "");
   setVal("ex"+i, data.ex ?? "");
   setVal("tilt"+i, data.tilt ?? "");
-
   setVal("motorNo"+i, data.motorNo ?? "");
   setVal("motor"+i, data.motor ?? "");
   setVal("boatNo"+i, data.boatNo ?? "");
   setVal("boat"+i, data.boat ?? "");
   setVal("win"+i, data.win ?? "");
   setVal("lane"+i, data.lane ?? i);
-
   setVal("nige"+i, data.nige ?? 5);
   setVal("nigashi"+i, data.nigashi ?? 5);
   setVal("sashi"+i, data.sashi ?? 5);
@@ -241,6 +235,31 @@ function rankBonus(b){
   if(b.rank === "A1" && b.motor >= 40) s += 2;
   if(b.rank === "A1" && b.avgst <= 0.13) s += 2;
   if(b.rank === "B2" && b.avgst >= 0.20) s -= 2;
+
+  return s;
+}
+
+function winRateFilter(b){
+  let s = 0;
+
+  // 勝率が低すぎる選手は強く減点
+  if(b.win <= 2) s -= 20;
+  if(b.win <= 1) s -= 40;
+  if(b.win === 0) s -= 60;
+
+  // B2 + 低勝率はさらに厳しめ
+  if(b.rank === "B2" && b.win <= 2){
+    s -= 20;
+  }
+
+  // 外寄り + 低勝率はかなり厳しい
+  if(b.lane >= 5 && b.win <= 2){
+    s -= 15;
+  }
+
+  // 頭候補補正
+  if(b.win >= 6) s += 5;
+  if(b.win >= 7) s += 5;
 
   return s;
 }
@@ -289,7 +308,9 @@ function predict(){
     s += b.motor * 1.0;
     s += b.boat * 0.8;
     s += b.win * 5;
+
     s += rankBonus(b);
+    s += winRateFilter(b);
 
     if(b.no === 1) s += b.nige * 3.2;
     if(b.no === 2) s += b.nigashi * 2.4;
@@ -302,13 +323,20 @@ function predict(){
     if(b.tilt > 0) s += b.tilt * 3;
     if(b.tilt < 0) s += Math.abs(b.tilt) * 1.5;
 
+    // 唐津補正
     if(b.no === 1) s += 4;
     if(b.lane <= 2) s += 1.5;
     if(windSpeed >= 4 && (b.ms >= 7 || b.sashi >= 7)) s += 3;
 
+    // 前付け・進入補正
     if(front === "yes"){
       if(b.lane <= 2) s -= 6;
       if(b.lane >= 4) s += 3;
+      if(b.lane >= 6) s -= 8;
+      if(b.lane === 3){
+        s += b.sashi * 0.8;
+        s += b.turn * 1.0;
+      }
     }
 
     if(deep === "mid"){
